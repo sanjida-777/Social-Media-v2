@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="120px" height="200px" viewBox="0 0 120 200" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>Story Sample 2</title>
+    <defs>
+        <linearGradient x1="0%" y1="0%" x2="100%" y2="100%" id="storyGradient2">
+            <stop stop-color="#834d9b" offset="0%"></stop>
+            <stop stop-color="#d04ed6" offset="100%"></stop>
+        </linearGradient>
+    </defs>
+    <g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <rect fill="url(#storyGradient2)" x="0" y="0" width="120" height="200" rx="10"></rect>
+        <text font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#FFFFFF" text-anchor="middle" x="60" y="105">
+            Stories last
+        </text>
+        <text font-family="Arial, sans-serif" font-size="12" fill="#FFFFFF" text-anchor="middle" x="60" y="125">
+            24 hours
+        </text>
+    </g>
+</svg>

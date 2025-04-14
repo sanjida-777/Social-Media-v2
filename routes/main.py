@@ -14,4 +14,27 @@ def index():
     if not g.user:
         return redirect(url_for('auth.login'))
     
-    return render_template('index.html')
+    # Get stories (most recent from friends and followed users)
+    stories = []
+    
+    # Get posts for the feed (from friends and followed users)
+    posts = []
+    
+    # Get friend suggestions
+    friend_suggestions = []
+    
+    # Get trending tags
+    trending_tags = []
+    
+    # Configuration values 
+    from config import get_site_name
+    site_name = get_site_name()
+    
+    return render_template(
+        'main/index.html',
+        site_name=site_name,
+        stories=stories,
+        posts=posts,
+        friend_suggestions=friend_suggestions,
+        trending_tags=trending_tags
+    )

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="200px" height="200px" viewBox="0 0 200 200" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>Default Avatar</title>
+    <defs>
+        <linearGradient x1="0%" y1="0%" x2="100%" y2="100%" id="avatarGradient">
+            <stop stop-color="#4A6FFF" offset="0%"></stop>
+            <stop stop-color="#9546C4" offset="100%"></stop>
+        </linearGradient>
+    </defs>
+    <g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <circle fill="url(#avatarGradient)" cx="100" cy="100" r="100"></circle>
+        <path d="M100,140 C126.510,140 148,118.51 148,92 C148,65.49 126.51,44 100,44 C73.49,44 52,65.49 52,92 C52,118.51 73.49,140 100,140 Z" fill="#FFFFFF" fill-opacity="0.15"></path>
+        <path d="M59.0976,160.53 C71.0976,145.61 85.0296,138 100.0976,138 C115.1656,138 129.0976,145.61 140.9016,160.53 C154.8136,146.62 162.0976,127.8 162.0976,108 C162.0976,73.73 134.3676,46 100.0976,46 C65.8276,46 38.0976,73.73 38.0976,108 C38.0976,127.8 45.3816,146.62 59.0976,160.53 Z" fill="#FFFFFF" fill-opacity="0.1"></path>
+        <path d="M100,175 C142.5,175 170,140 170,108 C170,66 138,38 100,38 C62,38 30,66 30,108 C30,140 57.5,175 100,175 Z" fill="#FFFFFF" fill-opacity="0.05"></path>
+        <path d="M100,120 C82.909,120 69,106.091 69,89 L69,83 C69,65.909 82.909,52 100,52 C117.091,52 131,65.909 131,83 L131,89 C131,106.091 117.091,120 100,120 Z" fill="#FFFFFF"></path>
+        <path d="M155.831,162.789 C147.419,145.003 125.019,132 100,132 C74.992,132 52.601,144.993 44.181,162.764 C56.293,181.288 76.854,194 100,194 C123.138,194 143.693,181.298 155.831,162.789 Z" fill="#FFFFFF"></path>
+    </g>
+</svg>
