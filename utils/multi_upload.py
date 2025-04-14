@@ -160,6 +160,9 @@ def upload_to_gofile(file):
         return None
     
     try:
+        # Set default server in case the API fails
+        server = "store"
+        
         # First get the best server
         for attempt in range(MAX_RETRIES):
             try:
@@ -168,6 +171,7 @@ def upload_to_gofile(file):
                     data = server_response.json()
                     if data.get('status') == 'ok':
                         server = data['data']['server']
+                        logger.info(f"Using GoFile server: {server}")
                         break
                 logger.error(f"GoFile get server failed: {server_response.text}")
                 time.sleep(RETRY_DELAY)
@@ -176,8 +180,7 @@ def upload_to_gofile(file):
                 if attempt < MAX_RETRIES - 1:
                     time.sleep(RETRY_DELAY)
                 else:
-                    _mark_service_down('gofile')
-                    return None
+                    logger.warning("Using default GoFile server: store")
         
         # Now upload to the server
         files = {'file': (file.filename, file.read(), file.content_type)}

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Site Upload Test</title>
+    <link rel="stylesheet" href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css">
+    <style>
+        .upload-container {
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: var(--bs-dark);
+            border-radius: 10px;
+        }
+        .preview-image {
+            max-width: 100%;
+            max-height: 400px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .url-list {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            background-color: var(--bs-dark);
+        }
+        .url-item {
+            margin-bottom: 10px;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body class="bg-dark text-light">
+    <div class="container">
+        <div class="upload-container">
+            <h1 class="mb-4">Multi-Site Upload Test</h1>
+            <p class="lead">Test uploading images to multiple services</p>
+            
+            <form action="/upload-test" method="POST" enctype="multipart/form-data">
+                {{ form.hidden_tag() }}
+                <div class="mb-3">
+                    <label for="photo" class="form-label">Select image to upload:</label>
+                    <input class="form-control" type="file" id="photo" name="photo" accept="image/*">
+                </div>
+                <div class="mb-3">
+                    <button type="submit" class="btn btn-primary">Upload Image</button>
+                </div>
+            </form>
+            
+            {% if uploaded_urls %}
+            <div class="alert alert-success" role="alert">
+                <h4 class="alert-heading">Upload Success!</h4>
+                <p>Your image was successfully uploaded to multiple services for redundancy.</p>
+            </div>
+            
+            {% if primary_url %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Image Preview</h5>
+                </div>
+                <div class="card-body text-center">
+                    <img src="{{ primary_url }}" alt="Uploaded image" class="preview-image">
+                </div>
+            </div>
+            {% endif %}
+            
+            <div class="card">
+                <div class="card-header">
+                    <h5>Upload URLs</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">Your image was uploaded to these locations:</p>
+                    <div class="url-list">
+                        {% for url in uploaded_urls %}
+                        <div class="url-item">
+                            <a href="{{ url }}" target="_blank" class="text-info">{{ url }}</a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="card-footer text-muted">
+                    <small>If one service goes down, the system will automatically fallback to the next available URL.</small>
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if error %}
+            <div class="alert alert-danger" role="alert">
+                <h4 class="alert-heading">Upload Failed</h4>
+                <p>{{ error }}</p>
+            </div>
+            {% endif %}
+            
+        </div>
+    </div>
+</body>
+</html>
