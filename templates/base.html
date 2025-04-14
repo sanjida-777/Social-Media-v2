@@ -19,7 +19,7 @@
     <!-- Firebase Core JS SDK -->
     <script type="module">
         // Firebase configuration from the server
-        const firebaseConfig = {{ firebase_config|tojson }};
+        const firebaseConfig = {{ firebase_config|tojson|safe if firebase_config else '{}' }};
         
         // Global variable to check if Firebase is available
         window.isFirebaseInitialized = function() {
