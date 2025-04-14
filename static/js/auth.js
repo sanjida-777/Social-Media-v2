@@ -1,127 +1,351 @@
-// Auth related functionality
+/**
+ * Authentication functionality for the social media platform
+ * Supports both Firebase and local fallback authentication
+ */
 
-document.addEventListener('DOMContentLoaded', function() {
-  // Initialize Firebase auth UI if we're on login or register page
-  if (window.location.pathname.includes('login') || window.location.pathname.includes('register')) {
-    setupFirebaseAuthUI();
+// Track authentication state
+let currentUser = null;
+let authInitialized = false;
+
+// DOM elements
+const authContainer = document.getElementById('auth-container');
+const loginForm = document.getElementById('login-form');
+const registerForm = document.getElementById('register-form');
+const logoutButton = document.getElementById('logout-button');
+const authMessage = document.getElementById('auth-message');
+const userProfileSection = document.getElementById('user-profile');
+
+/**
+ * Initialize Firebase Auth UI
+ * Uses Firebase UI for a nicer authentication experience
+ */
+function setupFirebaseAuthUI() {
+  try {
+    // Check if Firebase is available and initialized
+    if (typeof firebase === 'undefined') {
+      console.error('Firebase SDK not loaded');
+      setupLocalAuth();
+      return;
+    }
+    
+    if (!isFirebaseInitialized()) {
+      console.warn('Firebase not initialized, using local auth');
+      setupLocalAuth();
+      return;
+    }
+    
+    // Initialize Firebase UI if available
+    if (typeof firebaseui !== 'undefined') {
+      const ui = new firebaseui.auth.AuthUI(firebase.auth());
+      ui.start('#firebaseui-auth-container', {
+        signInOptions: [
+          firebase.auth.EmailAuthProvider.PROVIDER_ID,
+          firebase.auth.GoogleAuthProvider.PROVIDER_ID
+        ],
+        signInSuccessUrl: '/',
+        tosUrl: '/terms',
+        privacyPolicyUrl: '/privacy'
+      });
+      
+      // Listen for auth state changes
+      firebase.auth().onAuthStateChanged(handleAuthStateChange);
+      authInitialized = true;
+    } else {
+      console.warn('Firebase UI not loaded, using basic auth');
+      setupBasicFirebaseAuth();
+    }
+  } catch (error) {
+    console.error('Error setting up Firebase Auth UI:', error);
+    setupLocalAuth();
   }
+}
+
+/**
+ * Setup basic Firebase auth without UI library
+ */
+function setupBasicFirebaseAuth() {
+  // Listen for auth state changes
+  firebase.auth().onAuthStateChanged(handleAuthStateChange);
   
-  // Check auth state on every page
-  checkAuthState();
-  
-  // Handle traditional form login/register if present
-  const loginForm = document.getElementById('login-form');
+  // Set up login form
   if (loginForm) {
-    loginForm.addEventListener('submit', handleTraditionalLogin);
-  }
-  
-  const registerForm = document.getElementById('register-form');
-  if (registerForm) {
-    registerForm.addEventListener('submit', handleTraditionalRegister);
-  }
-  
-  // Handle logout button
-  const logoutBtn = document.getElementById('logout-btn');
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', function(e) {
+    loginForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      signOut();
+      const email = loginForm.querySelector('[name="email"]').value;
+      const password = loginForm.querySelector('[name="password"]').value;
+      
+      try {
+        showAuthMessage('Logging in...', 'info');
+        await login(email, password);
+      } catch (error) {
+        showAuthMessage(`Login failed: ${error.message}`, 'error');
+      }
     });
   }
-});
-
-// Handle traditional form login
-function handleTraditionalLogin(e) {
-  e.preventDefault();
   
-  const email = document.getElementById('email').value;
-  const password = document.getElementById('password').value;
-  
-  if (!email || !password) {
-    showAlert('danger', 'Please enter both email and password');
-    return;
+  // Set up register form
+  if (registerForm) {
+    registerForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = registerForm.querySelector('[name="email"]').value;
+      const username = registerForm.querySelector('[name="username"]').value;
+      const password = registerForm.querySelector('[name="password"]').value;
+      const confirmPassword = registerForm.querySelector('[name="password-confirm"]').value;
+      
+      if (password !== confirmPassword) {
+        showAuthMessage('Passwords do not match', 'error');
+        return;
+      }
+      
+      try {
+        showAuthMessage('Creating account...', 'info');
+        await register(email, password, username);
+      } catch (error) {
+        showAuthMessage(`Registration failed: ${error.message}`, 'error');
+      }
+    });
   }
   
-  // Sign in with Firebase
-  initializeAuth().signInWithEmailAndPassword(email, password)
-    .then((userCredential) => {
-      // Get token and send to backend
-      userCredential.user.getIdToken().then(token => {
-        sendTokenToBackend(token);
-      });
-    })
-    .catch((error) => {
-      console.error('Firebase login error:', error);
-      showAlert('danger', 'Login failed: ' + error.message);
+  // Set up logout button
+  if (logoutButton) {
+    logoutButton.addEventListener('click', async () => {
+      try {
+        await logout();
+        location.href = '/login';
+      } catch (error) {
+        showAuthMessage(`Logout failed: ${error.message}`, 'error');
+      }
     });
+  }
+  
+  authInitialized = true;
 }
 
-// Handle traditional form registration
-function handleTraditionalRegister(e) {
-  e.preventDefault();
-  
-  const username = document.getElementById('username').value;
-  const email = document.getElementById('email').value;
-  const password = document.getElementById('password').value;
-  const confirmPassword = document.getElementById('confirm-password').value;
-  
-  if (!username || !email || !password) {
-    showAlert('danger', 'Please fill out all required fields');
-    return;
-  }
-  
-  if (password !== confirmPassword) {
-    showAlert('danger', 'Passwords do not match');
-    return;
-  }
-  
-  // Create user with Firebase
-  initializeAuth().createUserWithEmailAndPassword(email, password)
-    .then((userCredential) => {
-      // Update profile with username
-      return userCredential.user.updateProfile({
-        displayName: username
-      }).then(() => userCredential);
+/**
+ * Setup local authentication (no Firebase)
+ */
+function setupLocalAuth() {
+  // Check if we're already logged in (server-side session)
+  fetch('/api/auth/me')
+    .then(response => response.json())
+    .then(data => {
+      if (data.authenticated) {
+        handleAuthStateChange({ 
+          email: data.email, 
+          displayName: data.username,
+          uid: data.id
+        });
+      }
     })
-    .then((userCredential) => {
-      // Get token and send to backend
-      userCredential.user.getIdToken().then(token => {
-        sendTokenToBackend(token);
-      });
-    })
-    .catch((error) => {
-      console.error('Firebase registration error:', error);
-      showAlert('danger', 'Registration failed: ' + error.message);
+    .catch(error => {
+      console.error('Error checking auth status:', error);
     });
+  
+  // Set up login form
+  if (loginForm) {
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = loginForm.querySelector('[name="email"]').value;
+      const password = loginForm.querySelector('[name="password"]').value;
+      
+      try {
+        showAuthMessage('Logging in...', 'info');
+        await login(email, password);
+        location.href = '/';
+      } catch (error) {
+        showAuthMessage(`Login failed: ${error.message}`, 'error');
+      }
+    });
+  }
+  
+  // Set up register form
+  if (registerForm) {
+    registerForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = registerForm.querySelector('[name="email"]').value;
+      const username = registerForm.querySelector('[name="username"]').value;
+      const password = registerForm.querySelector('[name="password"]').value;
+      const confirmPassword = registerForm.querySelector('[name="password-confirm"]').value;
+      
+      if (password !== confirmPassword) {
+        showAuthMessage('Passwords do not match', 'error');
+        return;
+      }
+      
+      try {
+        showAuthMessage('Creating account...', 'info');
+        await register(email, password, username);
+        showAuthMessage('Account created! You can now log in.', 'success');
+        
+        // Redirect to login page or automatically log in
+        setTimeout(() => {
+          location.href = '/login';
+        }, 2000);
+      } catch (error) {
+        showAuthMessage(`Registration failed: ${error.message}`, 'error');
+      }
+    });
+  }
+  
+  // Set up logout button
+  if (logoutButton) {
+    logoutButton.addEventListener('click', async () => {
+      try {
+        await fetch('/api/auth/logout', { method: 'POST' });
+        location.href = '/login';
+      } catch (error) {
+        showAuthMessage(`Logout failed: ${error.message}`, 'error');
+      }
+    });
+  }
+  
+  authInitialized = true;
 }
 
-// Check if user is authenticated, update UI accordingly
-function updateAuthUI() {
-  const user = initializeAuth().currentUser;
-  
-  const authNav = document.getElementById('auth-nav');
-  const userNav = document.getElementById('user-nav');
-  
-  if (!authNav || !userNav) return;
+/**
+ * Handle authentication state changes
+ * @param {Object} user - User object from Firebase or local auth
+ */
+function handleAuthStateChange(user) {
+  currentUser = user;
   
   if (user) {
-    authNav.classList.add('d-none');
-    userNav.classList.remove('d-none');
+    console.log('User is signed in:', user.email);
     
-    // Update user profile elements
-    const userDisplayName = document.getElementById('user-display-name');
-    const userProfilePic = document.getElementById('user-profile-pic');
+    // Update UI for logged in user
+    document.body.classList.add('user-logged-in');
+    document.body.classList.remove('user-logged-out');
     
-    if (userDisplayName) {
-      userDisplayName.textContent = user.displayName || 'User';
+    // Update profile section if it exists
+    if (userProfileSection) {
+      updateUserProfile(user);
     }
     
-    if (userProfilePic && user.photoURL) {
-      userProfilePic.src = user.photoURL;
-      userProfilePic.alt = user.displayName || 'User';
+    // Send the Firebase token to the backend to create a session
+    if (typeof firebase !== 'undefined' && isFirebaseInitialized()) {
+      firebase.auth().currentUser.getIdToken(true)
+        .then(token => {
+          return fetch('/api/auth/session', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ token }),
+          });
+        })
+        .then(response => response.json())
+        .then(data => {
+          console.log('Session created:', data);
+        })
+        .catch(error => {
+          console.error('Error creating session:', error);
+        });
     }
   } else {
-    authNav.classList.remove('d-none');
-    userNav.classList.add('d-none');
+    console.log('User is signed out');
+    
+    // Update UI for logged out user
+    document.body.classList.remove('user-logged-in');
+    document.body.classList.add('user-logged-out');
+    
+    // Redirect to login page if not already there
+    const currentPath = window.location.pathname;
+    if (currentPath !== '/login' && currentPath !== '/register') {
+      location.href = '/login';
+    }
   }
 }
+
+/**
+ * Update user profile section
+ * @param {Object} user - User object
+ */
+function updateUserProfile(user) {
+  if (!userProfileSection) return;
+  
+  // Get user details from the server
+  fetch(`/api/users/profile`)
+    .then(response => response.json())
+    .then(data => {
+      if (data.error) {
+        console.error('Error fetching user profile:', data.error);
+        return;
+      }
+      
+      // Update profile picture
+      const profilePic = userProfileSection.querySelector('.profile-pic');
+      if (profilePic) {
+        profilePic.src = data.profile_pic || '/static/images/default-avatar.png';
+        profilePic.alt = data.username;
+      }
+      
+      // Update username
+      const usernameElement = userProfileSection.querySelector('.username');
+      if (usernameElement) {
+        usernameElement.textContent = data.username;
+      }
+      
+      // Update bio
+      const bioElement = userProfileSection.querySelector('.bio');
+      if (bioElement) {
+        bioElement.textContent = data.bio || 'No bio yet';
+      }
+    })
+    .catch(error => {
+      console.error('Error fetching user profile:', error);
+    });
+}
+
+/**
+ * Show authentication message
+ * @param {string} message - Message to display
+ * @param {string} type - Message type (success, error, info)
+ */
+function showAuthMessage(message, type = 'info') {
+  if (!authMessage) return;
+  
+  authMessage.textContent = message;
+  authMessage.className = `auth-message ${type}`;
+  authMessage.style.display = 'block';
+  
+  // Hide message after 5 seconds
+  setTimeout(() => {
+    authMessage.style.display = 'none';
+  }, 5000);
+}
+
+/**
+ * Get current user
+ * @returns {Object|null} - Current user or null if not logged in
+ */
+function getCurrentUser() {
+  return currentUser;
+}
+
+/**
+ * Check if user is logged in
+ * @returns {boolean} - True if user is logged in
+ */
+function isLoggedIn() {
+  return currentUser !== null;
+}
+
+// Initialize auth when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+  // Check if Firebase is available
+  if (typeof firebase !== 'undefined') {
+    // Try to initialize Firebase first
+    setTimeout(() => {
+      if (isFirebaseInitialized()) {
+        console.log('Using Firebase authentication');
+        setupFirebaseAuthUI();
+      } else {
+        console.log('Firebase not initialized, using local authentication');
+        setupLocalAuth();
+      }
+    }, 1000); // Wait for Firebase to initialize
+  } else {
+    console.log('Firebase not available, using local authentication');
+    setupLocalAuth();
+  }
+});
