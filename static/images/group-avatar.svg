@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="200px" height="200px" viewBox="0 0 200 200" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>Group Avatar</title>
+    <defs>
+        <linearGradient x1="0%" y1="0%" x2="100%" y2="100%" id="groupGradient">
+            <stop stop-color="#4CAF50" offset="0%"></stop>
+            <stop stop-color="#2E7D32" offset="100%"></stop>
+        </linearGradient>
+    </defs>
+    <g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <circle fill="url(#groupGradient)" cx="100" cy="100" r="100"></circle>
+        <!-- User 1 -->
+        <circle fill="#FFFFFF" fill-opacity="0.9" cx="72" cy="70" r="28"></circle>
+        <path d="M72,80 C63,80 56,73 56,64 L56,62 C56,53 63,46 72,46 C81,46 88,53 88,62 L88,64 C88,73 81,80 72,80 Z" fill="#2E7D32"></path>
+        <path d="M90,102 C87,94 80,89 72,89 C64,89 57,94 54,102 C58,106 65,109 72,109 C79,109 86,106 90,102 Z" fill="#2E7D32"></path>
+        
+        <!-- User 2 -->
+        <circle fill="#FFFFFF" fill-opacity="0.9" cx="128" cy="70" r="28"></circle>
+        <path d="M128,80 C119,80 112,73 112,64 L112,62 C112,53 119,46 128,46 C137,46 144,53 144,62 L144,64 C144,73 137,80 128,80 Z" fill="#2E7D32"></path>
+        <path d="M146,102 C143,94 136,89 128,89 C120,89 113,94 110,102 C114,106 121,109 128,109 C135,109 142,106 146,102 Z" fill="#2E7D32"></path>
+        
+        <!-- User 3 -->
+        <circle fill="#FFFFFF" fill-opacity="0.9" cx="100" cy="114" r="28"></circle>
+        <path d="M100,124 C91,124 84,117 84,108 L84,106 C84,97 91,90 100,90 C109,90 116,97 116,106 L116,108 C116,117 109,124 100,124 Z" fill="#2E7D32"></path>
+        <path d="M118,146 C115,138 108,133 100,133 C92,133 85,138 82,146 C86,150 93,153 100,153 C107,153 114,150 118,146 Z" fill="#2E7D32"></path>
+    </g>
+</svg>
