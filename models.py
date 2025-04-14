@@ -4,6 +4,41 @@ from flask_login import UserMixin
 from sqlalchemy import event, func
 from app import db
 
+class FileUpload(db.Model):
+    """
+    Tracks files uploaded to multiple hosting services
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    original_filename = db.Column(db.String(255), nullable=False)
+    primary_url = db.Column(db.String(500), nullable=False)
+    fallback_urls = db.Column(db.Text)  # JSON list of backup URLs
+    media_type = db.Column(db.String(20), nullable=False)  # 'image' or 'video'
+    upload_date = db.Column(db.DateTime, default=datetime.utcnow)
+    last_check = db.Column(db.DateTime, default=datetime.utcnow)
+    is_available = db.Column(db.Boolean, default=True)
+    
+    def get_all_urls(self):
+        """
+        Returns a list of all URLs for this file
+        """
+        urls = [self.primary_url]
+        if self.fallback_urls:
+            try:
+                fallback = json.loads(self.fallback_urls)
+                if isinstance(fallback, list):
+                    urls.extend(fallback)
+            except:
+                pass
+        return urls
+    
+    def get_best_url(self):
+        """
+        Returns the best available URL for this file
+        """
+        from utils.multi_upload import get_first_working_url
+        urls = self.get_all_urls()
+        return get_first_working_url(urls) or self.primary_url
+
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     firebase_uid = db.Column(db.String(128), unique=True, nullable=False)
