@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+
+{% block title %}Stories | Social App{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <!-- Left Sidebar - Desktop only -->
+        <div class="col-lg-3 d-none d-lg-block">
+            <div class="sidebar">
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('feed.index') }}">
+                            <i class="bi bi-house-door me-2"></i> Home
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('profile.view_profile', username=g.user.username) }}">
+                            <i class="bi bi-person me-2"></i> Profile
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('feed.friends') }}">
+                            <i class="bi bi-people me-2"></i> Friends
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{{ url_for('story.stories') }}">
+                            <i class="bi bi-collection me-2"></i> Stories
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('chat.messages') }}">
+                            <i class="bi bi-chat-dots me-2"></i> Messages
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('notifications.notifications') }}">
+                            <i class="bi bi-bell me-2"></i> Notifications
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('profile.edit_profile') }}">
+                            <i class="bi bi-gear me-2"></i> Settings
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="col-lg-9">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h3>Stories</h3>
+                <a href="{{ url_for('story.create_story') }}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle me-2"></i>Create Story
+                </a>
+            </div>
+            
+            <!-- Your Story -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Your Story</h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row">
+                        <div class="col-md-3 col-6 mb-3">
+                            <a href="{{ url_for('story.create_story') }}" class="text-decoration-none">
+                                <div class="story-item create-story">
+                                    <div class="story-create-avatar">
+                                        <div class="story-avatar">
+                                            <i class="bi bi-plus-circle-fill"></i>
+                                        </div>
+                                    </div>
+                                    <p class="story-username text-center text-truncate mt-2">Create Story</p>
+                                </div>
+                            </a>
+                        </div>
+                        
+                        <!-- This will be populated with the user's active stories -->
+                        <div id="my-stories" class="row"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- All Stories -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">All Stories</h5>
+                </div>
+                <div class="card-body">
+                    <div id="all-stories" class="row">
+                        <!-- Will be populated by JS -->
+                        <div class="col-12 text-center py-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading stories...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Load stories
+        if (window.storyModule) {
+            window.storyModule.loadStories();
+            
+            // Process and display stories
+            fetch('/api/stories')
+                .then(response => response.json())
+                .then(data => {
+                    const myStoriesContainer = document.getElementById('my-stories');
+                    const allStoriesContainer = document.getElementById('all-stories');
+                    
+                    if (myStoriesContainer && allStoriesContainer) {
+                        // Clear containers
+                        myStoriesContainer.innerHTML = '';
+                        allStoriesContainer.innerHTML = '';
+                        
+                        const currentUserId = document.getElementById('current-user-id').value;
+                        let myStories = [];
+                        let otherStories = [];
+                        
+                        // Separate my stories from others
+                        data.story_users.forEach(user => {
+                            if (user.user.id == currentUserId) {
+                                myStories = user.stories;
+                            } else {
+                                otherStories.push(user);
+                            }
+                        });
+                        
+                        // Display my stories
+                        if (myStories.length > 0) {
+                            myStories.forEach((story, index) => {
+                                const storyItem = document.createElement('div');
+                                storyItem.className = 'col-md-3 col-6 mb-3';
+                                storyItem.innerHTML = `
+                                    <div class="story-item" data-user-index="0" data-story-index="${index}">
+                                        <div class="story-avatar-wrapper ${story.viewed ? 'viewed' : 'unviewed'}">
+                                            <div class="story-avatar">
+                                                <img src="${story.story_type === 'photo' ? story.media_url : (story.profile_pic || '/static/img/default-avatar.png')}" alt="">
+                                            </div>
+                                        </div>
+                                        <p class="story-username text-center text-truncate mt-2">
+                                            ${story.story_type === 'text' ? 'Text Story' : (story.story_type === 'photo' ? 'Photo Story' : 'Video Story')}
+                                        </p>
+                                    </div>
+                                `;
+                                myStoriesContainer.appendChild(storyItem);
+                                
+                                // Add click event to open story
+                                storyItem.querySelector('.story-item').addEventListener('click', () => {
+                                    window.storyModule.openStoryViewer(0, index);
+                                });
+                            });
+                        } else {
+                            myStoriesContainer.innerHTML = `
+                                <div class="col-12 text-center py-2">
+                                    <p class="text-muted">You haven't created any stories yet</p>
+                                </div>
+                            `;
+                        }
+                        
+                        // Display all stories
+                        if (otherStories.length > 0) {
+                            otherStories.forEach((user, userIndex) => {
+                                const storyCol = document.createElement('div');
+                                storyCol.className = 'col-md-3 col-6 mb-4';
+                                
+                                // Determine if any stories are unviewed
+                                const hasUnviewed = user.stories.some(story => !story.viewed);
+                                
+                                storyCol.innerHTML = `
+                                    <div class="story-item" data-user-index="${userIndex + 1}" data-story-index="0">
+                                        <div class="story-avatar-wrapper ${hasUnviewed ? 'unviewed' : 'viewed'}">
+                                            <div class="story-avatar">
+                                                <img src="${user.user.profile_pic || '/static/img/default-avatar.png'}" alt="${user.user.username}">
+                                            </div>
+                                        </div>
+                                        <p class="story-username text-center text-truncate mt-2">${user.user.username}</p>
+                                        <p class="text-muted text-center small">${user.stories.length} ${user.stories.length > 1 ? 'stories' : 'story'}</p>
+                                    </div>
+                                `;
+                                allStoriesContainer.appendChild(storyCol);
+                                
+                                // Add click event to open story
+                                storyCol.querySelector('.story-item').addEventListener('click', () => {
+                                    window.storyModule.openStoryViewer(userIndex + 1, 0);
+                                });
+                            });
+                        } else {
+                            allStoriesContainer.innerHTML = `
+                                <div class="col-12 text-center py-4">
+                                    <p class="text-muted">No stories available from your friends</p>
+                                </div>
+                            `;
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading stories:', error);
+                    const allStoriesContainer = document.getElementById('all-stories');
+                    if (allStoriesContainer) {
+                        allStoriesContainer.innerHTML = `
+                            <div class="col-12 text-center py-4">
+                                <p class="text-danger">Error loading stories. Please try refreshing the page.</p>
+                            </div>
+                        `;
+                    }
+                });
+        }
+    });
+</script>
+{% endblock %}

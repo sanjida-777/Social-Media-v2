@@ -1,0 +1,352 @@
+{% extends "base.html" %}
+
+{% block title %}Group Chat | Social App{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Chat list column -->
+        <div class="col-md-4 col-lg-3 p-0 border-end">
+            <div class="chat-sidebar">
+                <div class="chat-list-header">
+                    <h5 class="mb-0">Messages</h5>
+                    <button class="btn btn-primary btn-sm rounded-circle" id="new-chat-btn" title="New Message">
+                        <i class="bi bi-pencil-square"></i>
+                    </button>
+                </div>
+                <div class="chat-list" id="chat-list">
+                    <div class="text-center p-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading chats...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Chat content column -->
+        <div class="col-md-8 col-lg-9 p-0">
+            <div class="chat-container">
+                <!-- Chat header -->
+                <div class="chat-header">
+                    <div class="chat-avatar">
+                        <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                            <i class="bi bi-people-fill text-white"></i>
+                        </div>
+                    </div>
+                    <div class="chat-info">
+                        <h5 class="chat-name mb-0">{{ chat.name }}</h5>
+                        <span class="text-muted small member-count">
+                            <!-- Will be populated by JS -->
+                            Loading members...
+                        </span>
+                    </div>
+                    <div class="chat-actions">
+                        <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#group-info-modal">
+                            <i class="bi bi-info-circle"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Chat messages -->
+                <div class="chat-body" id="chat-messages">
+                    <div class="text-center p-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading messages...</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Chat input -->
+                <div class="chat-footer">
+                    <form id="message-form">
+                        <div class="chat-input-container">
+                            <textarea id="message-input" class="form-control chat-input" placeholder="Type a message..." data-autosize></textarea>
+                            <div class="chat-actions">
+                                <button type="button" class="btn btn-outline-primary" id="attach-file-btn">
+                                    <i class="bi bi-paperclip"></i>
+                                </button>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-send"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Group Chat info modal -->
+<div class="modal fade" id="group-info-modal" tabindex="-1" aria-labelledby="groupInfoModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="groupInfoModalLabel">Group Information</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Group info -->
+                <div class="text-center mb-4">
+                    <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3" style="width: 64px; height: 64px;">
+                        <i class="bi bi-people-fill text-white fs-3"></i>
+                    </div>
+                    <h5 class="mb-1">{{ chat.name }}</h5>
+                    <p class="text-muted small">Created by 
+                        <a href="{{ url_for('profile.view_profile', username=chat.creator.username) }}">
+                            {{ chat.creator.username }}
+                        </a> on {{ chat.created_at|strftime('%b %d, %Y') }}
+                    </p>
+                </div>
+                
+                <!-- Members -->
+                <h6 class="mb-3 d-flex justify-content-between align-items-center">
+                    <span>Members</span>
+                    <!-- Show add member button if user is admin -->
+                    {% if g.user.id in [cm.user_id for cm in chat.members if cm.role == 'admin'] %}
+                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#add-member-modal">
+                        <i class="bi bi-person-plus"></i> Add
+                    </button>
+                    {% endif %}
+                </h6>
+                
+                <div class="group-members" id="chat-members-container">
+                    <div class="text-center py-3">
+                        <div class="spinner-border spinner-border-sm text-primary" role="status">
+                            <span class="visually-hidden">Loading members...</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Group actions -->
+                <div class="d-grid gap-2 mt-4">
+                    <button class="btn btn-outline-danger" id="leave-group-btn">
+                        <i class="bi bi-box-arrow-right me-2"></i>Leave Group
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add member modal -->
+<div class="modal fade" id="add-member-modal" tabindex="-1" aria-labelledby="addMemberModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addMemberModalLabel">Add Members</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <input type="text" class="form-control" id="add-member-search" placeholder="Search friends...">
+                </div>
+                <div id="add-member-results" class="search-results">
+                    <p class="text-center text-muted">Type at least 2 characters to search</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize chat module
+        if (window.chatModule) {
+            // Chat module from chat.js will handle most functionality
+        } else {
+            // Fallback implementation for basic functionality
+            const chatId = {{ chat.id }};
+            const chatList = document.getElementById('chat-list');
+            const chatMessages = document.getElementById('chat-messages');
+            const messageForm = document.getElementById('message-form');
+            const messageInput = document.getElementById('message-input');
+            const newChatBtn = document.getElementById('new-chat-btn');
+            const leaveGroupBtn = document.getElementById('leave-group-btn');
+            const membersContainer = document.getElementById('chat-members-container');
+            
+            // Load chat members
+            if (membersContainer) {
+                fetch(`/api/chat/${chatId}/members`)
+                    .then(response => response.json())
+                    .then(data => {
+                        membersContainer.innerHTML = '';
+                        
+                        if (data.members.length === 0) {
+                            membersContainer.innerHTML = '<p class="text-center text-muted">No members</p>';
+                            return;
+                        }
+                        
+                        const currentUserId = document.getElementById('current-user-id').value;
+                        const isAdmin = data.members.some(m => m.user_id == currentUserId && m.role === 'admin');
+                        
+                        data.members.forEach(member => {
+                            const memberItem = document.createElement('div');
+                            memberItem.className = 'member-item d-flex align-items-center p-2 border-bottom';
+                            memberItem.dataset.userId = member.user_id;
+                            
+                            memberItem.innerHTML = `
+                                <img src="${member.profile_pic || '/static/img/default-avatar.png'}" 
+                                    alt="${member.username}" class="rounded-circle me-3" width="40" height="40">
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-0">
+                                        ${member.username}
+                                        ${member.role === 'admin' ? '<span class="badge bg-primary ms-2">Admin</span>' : ''}
+                                    </h6>
+                                    <small class="text-muted">Joined ${timeAgo(member.joined_at)}</small>
+                                </div>
+                                
+                                ${isAdmin && member.user_id != currentUserId ? `
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm" type="button" data-bs-toggle="dropdown">
+                                            <i class="bi bi-three-dots-vertical"></i>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            ${member.role !== 'admin' ? 
+                                                `<li><a class="dropdown-item" href="#" data-action="make-admin" data-user-id="${member.user_id}">Make Admin</a></li>` : 
+                                                ''
+                                            }
+                                            <li><a class="dropdown-item text-danger" href="#" data-action="remove-member" data-user-id="${member.user_id}">Remove</a></li>
+                                        </ul>
+                                    </div>
+                                ` : ''}
+                            `;
+                            
+                            membersContainer.appendChild(memberItem);
+                        });
+                        
+                        // Update member count
+                        const memberCountEl = document.querySelector('.member-count');
+                        if (memberCountEl) {
+                            memberCountEl.textContent = `${data.members.length} members`;
+                        }
+                        
+                        // Add event listeners
+                        document.querySelectorAll('[data-action="make-admin"]').forEach(btn => {
+                            btn.addEventListener('click', function(e) {
+                                e.preventDefault();
+                                const userId = this.dataset.userId;
+                                
+                                fetch(`/api/chat/${chatId}/make_admin`, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                    },
+                                    body: JSON.stringify({ user_id: userId })
+                                })
+                                .then(response => response.json())
+                                .then(data => {
+                                    if (data.success) {
+                                        alert('Member promoted to admin');
+                                        // Reload members
+                                        fetch(`/api/chat/${chatId}/members`)
+                                            .then(response => response.json())
+                                            .then(data => {
+                                                // Reload the page to see changes
+                                                window.location.reload();
+                                            });
+                                    } else {
+                                        alert(data.error || 'Error promoting member');
+                                    }
+                                })
+                                .catch(error => {
+                                    console.error('Error promoting member:', error);
+                                    alert('Error promoting member. Please try again.');
+                                });
+                            });
+                        });
+                        
+                        document.querySelectorAll('[data-action="remove-member"]').forEach(btn => {
+                            btn.addEventListener('click', function(e) {
+                                e.preventDefault();
+                                const userId = this.dataset.userId;
+                                
+                                if (confirm('Are you sure you want to remove this member?')) {
+                                    fetch(`/api/chat/${chatId}/remove_member`, {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                        },
+                                        body: JSON.stringify({ user_id: userId })
+                                    })
+                                    .then(response => response.json())
+                                    .then(data => {
+                                        if (data.success) {
+                                            alert('Member removed');
+                                            // Remove from UI
+                                            const memberItem = membersContainer.querySelector(`.member-item[data-user-id="${userId}"]`);
+                                            if (memberItem) {
+                                                memberItem.remove();
+                                            }
+                                            
+                                            // Update member count
+                                            const memberCountEl = document.querySelector('.member-count');
+                                            if (memberCountEl) {
+                                                const count = membersContainer.querySelectorAll('.member-item').length;
+                                                memberCountEl.textContent = `${count} members`;
+                                            }
+                                        } else {
+                                            alert(data.error || 'Error removing member');
+                                        }
+                                    })
+                                    .catch(error => {
+                                        console.error('Error removing member:', error);
+                                        alert('Error removing member. Please try again.');
+                                    });
+                                }
+                            });
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error loading members:', error);
+                        membersContainer.innerHTML = `
+                            <div class="alert alert-danger">
+                                Error loading members. Please try refreshing the page.
+                            </div>
+                        `;
+                    });
+            }
+            
+            // Handle leave group button
+            if (leaveGroupBtn) {
+                leaveGroupBtn.addEventListener('click', function() {
+                    if (confirm('Are you sure you want to leave this group?')) {
+                        fetch(`/api/chat/${chatId}/leave`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            }
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                alert('You have left the group');
+                                window.location.href = '/messages';
+                            } else {
+                                alert(data.error || 'Error leaving group');
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error leaving group:', error);
+                            alert('Error leaving group. Please try again.');
+                        });
+                    }
+                });
+            }
+            
+            // Load chat list, messages, handle send message etc. (same as chat.html)
+            // This would be duplicated code, in a real implementation we'd use the chat module
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+
+{% block title %}Create Story | Social App{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Create Story</h5>
+                    <button type="button" class="btn-close" aria-label="Close" onclick="history.back()"></button>
+                </div>
+                <div class="card-body">
+                    <form id="create-story-form" action="{{ url_for('story.create_story') }}" method="post" enctype="multipart/form-data">
+                        <!-- Story type selection -->
+                        <div class="mb-4">
+                            <h6 class="mb-3">Choose story type:</h6>
+                            <div class="d-flex flex-wrap gap-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="story_type" id="story-type-text" value="text" checked>
+                                    <label class="form-check-label" for="story-type-text">
+                                        <i class="bi bi-textarea-t me-1"></i> Text
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="story_type" id="story-type-photo" value="photo">
+                                    <label class="form-check-label" for="story-type-photo">
+                                        <i class="bi bi-image me-1"></i> Photo
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="story_type" id="story-type-video" value="video">
+                                    <label class="form-check-label" for="story-type-video">
+                                        <i class="bi bi-camera-video me-1"></i> Video
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Text content section -->
+                        <div class="story-content-section mb-4" data-type="text">
+                            <h6 class="mb-2">Text Story</h6>
+                            <textarea class="form-control" name="content" rows="5" placeholder="Share what's on your mind..."></textarea>
+                        </div>
+                        
+                        <!-- Photo content section -->
+                        <div class="story-content-section mb-4" data-type="photo" style="display: none;">
+                            <h6 class="mb-2">Photo Story</h6>
+                            <div class="mb-3">
+                                <label for="photo-upload" class="form-label">Upload Photo</label>
+                                <input class="form-control" type="file" id="photo-upload" name="photo" accept="image/*">
+                            </div>
+                            <div class="photo-preview mb-3" style="display: none;"></div>
+                            <div class="mb-3">
+                                <label for="photo-caption" class="form-label">Caption (optional)</label>
+                                <textarea class="form-control" id="photo-caption" name="content" rows="2" placeholder="Add a caption..."></textarea>
+                            </div>
+                        </div>
+                        
+                        <!-- Video content section -->
+                        <div class="story-content-section mb-4" data-type="video" style="display: none;">
+                            <h6 class="mb-2">Video Story</h6>
+                            <div class="mb-3">
+                                <label for="video-upload" class="form-label">Upload Video (Max 1 minute)</label>
+                                <input class="form-control" type="file" id="video-upload" name="video" accept="video/*">
+                            </div>
+                            <div class="video-preview mb-3" style="display: none;"></div>
+                            <div class="video-duration-error alert alert-danger" style="display: none;">
+                                Video must be less than 1 minute long.
+                            </div>
+                            <div class="mb-3">
+                                <label for="video-caption" class="form-label">Caption (optional)</label>
+                                <textarea class="form-control" id="video-caption" name="content" rows="2" placeholder="Add a caption..."></textarea>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">Create Story</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize the create story functionality
+        if (window.storyModule) {
+            // The story.js should handle most of the functionality
+        } else {
+            // Fallback implementation
+            const form = document.getElementById('create-story-form');
+            const storyTypeRadios = form.querySelectorAll('input[name="story_type"]');
+            const storyContentSections = form.querySelectorAll('.story-content-section');
+            
+            // Handle story type selection
+            storyTypeRadios.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    storyContentSections.forEach(section => {
+                        section.style.display = 'none';
+                    });
+                    
+                    const selectedType = this.value;
+                    const targetSection = form.querySelector(`.story-content-section[data-type="${selectedType}"]`);
+                    if (targetSection) {
+                        targetSection.style.display = 'block';
+                    }
+                });
+            });
+            
+            // Handle photo preview
+            const photoInput = form.querySelector('input[name="photo"]');
+            const photoPreview = form.querySelector('.photo-preview');
+            
+            if (photoInput && photoPreview) {
+                photoInput.addEventListener('change', function() {
+                    if (this.files && this.files[0]) {
+                        const reader = new FileReader();
+                        
+                        reader.onload = function(e) {
+                            photoPreview.innerHTML = `<img src="${e.target.result}" class="img-fluid rounded" alt="Photo preview">`;
+                            photoPreview.style.display = 'block';
+                        };
+                        
+                        reader.readAsDataURL(this.files[0]);
+                    }
+                });
+            }
+            
+            // Handle video preview and duration check
+            const videoInput = form.querySelector('input[name="video"]');
+            const videoPreview = form.querySelector('.video-preview');
+            const videoDurationError = form.querySelector('.video-duration-error');
+            
+            if (videoInput && videoPreview) {
+                videoInput.addEventListener('change', function() {
+                    if (this.files && this.files[0]) {
+                        const file = this.files[0];
+                        const videoURL = URL.createObjectURL(file);
+                        
+                        // Create video element to check duration
+                        const video = document.createElement('video');
+                        video.muted = true;
+                        
+                        video.onloadedmetadata = function() {
+                            URL.revokeObjectURL(videoURL);
+                            
+                            const duration = video.duration;
+                            
+                            if (duration > 60) {
+                                // Video too long
+                                videoPreview.innerHTML = '';
+                                videoPreview.style.display = 'none';
+                                videoDurationError.style.display = 'block';
+                                videoInput.value = ''; // Clear input
+                            } else {
+                                // Video acceptable
+                                videoDurationError.style.display = 'none';
+                                videoPreview.innerHTML = `
+                                    <video src="${videoURL}" controls class="img-fluid rounded"></video>
+                                    <p class="text-muted mt-1">Duration: ${Math.round(duration)} seconds</p>
+                                `;
+                                videoPreview.style.display = 'block';
+                            }
+                        };
+                        
+                        video.src = videoURL;
+                    }
+                });
+            }
+            
+            // Handle form submission
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const storyType = form.querySelector('input[name="story_type"]:checked').value;
+                
+                // Validate based on story type
+                let isValid = true;
+                
+                if (storyType === 'text') {
+                    const textContent = form.querySelector('textarea[name="content"]').value.trim();
+                    if (!textContent) {
+                        alert('Please enter text for your story');
+                        isValid = false;
+                    }
+                } else if (storyType === 'photo') {
+                    const photoFile = form.querySelector('input[name="photo"]').files[0];
+                    if (!photoFile) {
+                        alert('Please select a photo for your story');
+                        isValid = false;
+                    }
+                } else if (storyType === 'video') {
+                    const videoFile = form.querySelector('input[name="video"]').files[0];
+                    if (!videoFile) {
+                        alert('Please select a video for your story');
+                        isValid = false;
+                    }
+                }
+                
+                if (isValid) {
+                    // Show loading state
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    const originalText = submitBtn.innerHTML;
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Creating...';
+                    
+                    // Submit form
+                    form.submit();
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

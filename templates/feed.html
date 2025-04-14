@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block title %}Home | Social App{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <!-- Left Sidebar - Desktop only -->
+        <div class="col-lg-3 d-none d-lg-block">
+            <div class="sidebar">
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{{ url_for('feed.index') }}">
+                            <i class="bi bi-house-door me-2"></i> Home
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('profile.view_profile', username=g.user.username) }}">
+                            <i class="bi bi-person me-2"></i> Profile
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('feed.friends') }}">
+                            <i class="bi bi-people me-2"></i> Friends
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('story.stories') }}">
+                            <i class="bi bi-collection me-2"></i> Stories
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('chat.messages') }}">
+                            <i class="bi bi-chat-dots me-2"></i> Messages
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('notifications.notifications') }}">
+                            <i class="bi bi-bell me-2"></i> Notifications
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('profile.edit_profile') }}">
+                            <i class="bi bi-gear me-2"></i> Settings
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Main Feed -->
+        <div class="col-lg-6">
+            <!-- Stories -->
+            <div class="stories-container" id="story-carousel">
+                <!-- Will be populated by JS -->
+                <div class="d-flex justify-content-center py-3">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading stories...</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Create Post Card -->
+            <div class="card create-post-card">
+                <div class="create-post-header">
+                    <img src="{{ g.user.profile_pic or url_for('static', filename='img/default-avatar.png') }}" 
+                         alt="{{ g.user.username }}" class="rounded-circle" width="40" height="40">
+                    <a href="{{ url_for('feed.create_post') }}" class="create-post-input">
+                        What's on your mind, {{ g.user.username }}?
+                    </a>
+                </div>
+                <div class="create-post-actions">
+                    <a href="{{ url_for('feed.create_post') }}" class="create-post-action photo">
+                        <i class="bi bi-image"></i>
+                        <span>Photo</span>
+                    </a>
+                    <a href="{{ url_for('story.create_story') }}" class="create-post-action feeling">
+                        <i class="bi bi-collection"></i>
+                        <span>Story</span>
+                    </a>
+                </div>
+            </div>
+            
+            <!-- New Posts Notification -->
+            <div id="new-posts-notification" style="display: none;"></div>
+            
+            <!-- Posts Feed -->
+            <div id="posts-container">
+                <div class="text-center p-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading posts...</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Loading Indicator -->
+            <div id="loading-indicator" style="display: none;" class="text-center p-3">
+                <div class="spinner-border spinner-border-sm text-primary" role="status">
+                    <span class="visually-hidden">Loading more posts...</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Right Sidebar - Desktop only -->
+        <div class="col-lg-3 d-none d-lg-block">
+            <div class="right-sidebar">
+                <!-- Friend Suggestions -->
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">People you may know</h6>
+                    </div>
+                    <div class="card-body p-0">
+                        <div id="friend-suggestions">
+                            <!-- Will be populated by JS -->
+                            <div class="text-center p-3">
+                                <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                    <span class="visually-hidden">Loading suggestions...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Trending Topics -->
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">Create</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="list-group list-group-flush">
+                            <a href="{{ url_for('feed.create_post') }}" class="list-group-item list-group-item-action">
+                                <i class="bi bi-pencil-square me-2 text-primary"></i> Create Post
+                            </a>
+                            <a href="{{ url_for('story.create_story') }}" class="list-group-item list-group-item-action">
+                                <i class="bi bi-collection me-2 text-success"></i> Create Story
+                            </a>
+                            <a href="#" class="list-group-item list-group-item-action" id="new-chat-btn">
+                                <i class="bi bi-chat-dots me-2 text-info"></i> New Message
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Load posts when page loads
+        if (window.feedModule) {
+            window.feedModule.loadPosts();
+        }
+        
+        // Load stories when page loads
+        if (window.storyModule) {
+            window.storyModule.loadStories();
+        }
+    });
+</script>
+{% endblock %}
