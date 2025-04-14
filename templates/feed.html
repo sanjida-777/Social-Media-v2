@@ -15,12 +15,12 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('profile.view_profile', username=g.user.username) }}">
+                        <a class="nav-link" href="{{ url_for('auth.profile', username=g.user.username) }}">
                             <i class="bi bi-person me-2"></i> Profile
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('feed.friends') }}">
+                        <a class="nav-link" href="{{ url_for('auth.friends') }}">
                             <i class="bi bi-people me-2"></i> Friends
                         </a>
                     </li>
@@ -30,7 +30,7 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('chat.messages') }}">
+                        <a class="nav-link" href="{{ url_for('auth.messages', username='inbox') }}">
                             <i class="bi bi-chat-dots me-2"></i> Messages
                         </a>
                     </li>
@@ -40,14 +40,14 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('profile.edit_profile') }}">
+                        <a class="nav-link" href="{{ url_for('auth.settings') }}">
                             <i class="bi bi-gear me-2"></i> Settings
                         </a>
                     </li>
                 </ul>
             </div>
         </div>
-        
+
         <!-- Main Feed -->
         <div class="col-lg-6">
             <!-- Stories -->
@@ -59,11 +59,11 @@
                     </div>
                 </div>
             </div>
-            
+
             <!-- Create Post Card -->
             <div class="card create-post-card">
                 <div class="create-post-header">
-                    <img src="{{ g.user.profile_pic or url_for('static', filename='img/default-avatar.png') }}" 
+                    <img src="{{ g.user.profile_pic or url_for('static', filename='img/default-avatar.png') }}"
                          alt="{{ g.user.username }}" class="rounded-circle" width="40" height="40">
                     <a href="{{ url_for('feed.create_post') }}" class="create-post-input">
                         What's on your mind, {{ g.user.username }}?
@@ -80,10 +80,10 @@
                     </a>
                 </div>
             </div>
-            
+
             <!-- New Posts Notification -->
             <div id="new-posts-notification" style="display: none;"></div>
-            
+
             <!-- Posts Feed -->
             <div id="posts-container">
                 <div class="text-center p-4">
@@ -92,7 +92,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <!-- Loading Indicator -->
             <div id="loading-indicator" style="display: none;" class="text-center p-3">
                 <div class="spinner-border spinner-border-sm text-primary" role="status">
@@ -100,7 +100,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Right Sidebar - Desktop only -->
         <div class="col-lg-3 d-none d-lg-block">
             <div class="right-sidebar">
@@ -120,7 +120,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Trending Topics -->
                 <div class="card">
                     <div class="card-header">
@@ -153,7 +153,7 @@
         if (window.feedModule) {
             window.feedModule.loadPosts();
         }
-        
+
         // Load stories when page loads
         if (window.storyModule) {
             window.storyModule.loadStories();

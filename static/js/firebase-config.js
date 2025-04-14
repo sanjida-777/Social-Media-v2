@@ -21,20 +21,20 @@ function initFirebase(config) {
       console.log('Firebase already initialized');
       return true;
     }
-    
+
     // If no config provided, use default (empty)
     const finalConfig = config || firebaseConfig;
-    
+
     // Check if config has valid API key
     if (!finalConfig.apiKey) {
       console.log('Firebase API key not provided, using development mode');
       return false;
     }
-    
+
     // Initialize Firebase
     firebase.initializeApp(finalConfig);
     auth = firebase.auth();
-    
+
     // Set initialization flag
     firebaseInitialized = true;
     console.log('Firebase initialized successfully');
@@ -48,8 +48,9 @@ function initFirebase(config) {
 // Fallback for development mode
 function devLogin(email, password) {
   return new Promise((resolve, reject) => {
+    console.log('Using local authentication for login');
     // Send login request to server for local auth
-    fetch('/api/auth/login', {
+    fetch('/auth/api/login', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -59,8 +60,16 @@ function devLogin(email, password) {
     .then(response => response.json())
     .then(data => {
       if (data.success) {
-        resolve({ user: { email } });
+        console.log('Login successful:', data);
+        resolve({
+          user: {
+            email: data.user.email,
+            displayName: data.user.username,
+            uid: data.user.id
+          }
+        });
       } else {
+        console.error('Login failed:', data.message);
         reject(new Error(data.message || 'Invalid credentials'));
       }
     })
@@ -73,8 +82,9 @@ function devLogin(email, password) {
 // Fallback for development mode
 function devRegister(email, password, username) {
   return new Promise((resolve, reject) => {
+    console.log('Using local authentication for registration');
     // Send registration request to server for local auth
-    fetch('/api/auth/register', {
+    fetch('/auth/api/register', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -110,7 +120,7 @@ function register(email, password, username) {
     return auth.createUserWithEmailAndPassword(email, password)
       .then(userCredential => {
         // Send username to server
-        return fetch('/api/auth/update-profile', {
+        return fetch('/auth/api/update-profile', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -128,7 +138,7 @@ function logout() {
   if (isFirebaseInitialized()) {
     return auth.signOut();
   } else {
-    return fetch('/api/auth/logout', {
+    return fetch('/auth/api/logout', {
       method: 'POST',
     }).then(() => true);
   }

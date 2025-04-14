@@ -27,13 +27,13 @@ function setupFirebaseAuthUI() {
       setupLocalAuth();
       return;
     }
-    
+
     if (!isFirebaseInitialized()) {
       console.warn('Firebase not initialized, using local auth');
       setupLocalAuth();
       return;
     }
-    
+
     // Initialize Firebase UI if available
     if (typeof firebaseui !== 'undefined') {
       const ui = new firebaseui.auth.AuthUI(firebase.auth());
@@ -46,7 +46,7 @@ function setupFirebaseAuthUI() {
         tosUrl: '/terms',
         privacyPolicyUrl: '/privacy'
       });
-      
+
       // Listen for auth state changes
       firebase.auth().onAuthStateChanged(handleAuthStateChange);
       authInitialized = true;
@@ -66,14 +66,14 @@ function setupFirebaseAuthUI() {
 function setupBasicFirebaseAuth() {
   // Listen for auth state changes
   firebase.auth().onAuthStateChanged(handleAuthStateChange);
-  
+
   // Set up login form
   if (loginForm) {
     loginForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const email = loginForm.querySelector('[name="email"]').value;
       const password = loginForm.querySelector('[name="password"]').value;
-      
+
       try {
         showAuthMessage('Logging in...', 'info');
         await login(email, password);
@@ -82,7 +82,7 @@ function setupBasicFirebaseAuth() {
       }
     });
   }
-  
+
   // Set up register form
   if (registerForm) {
     registerForm.addEventListener('submit', async (e) => {
@@ -91,12 +91,12 @@ function setupBasicFirebaseAuth() {
       const username = registerForm.querySelector('[name="username"]').value;
       const password = registerForm.querySelector('[name="password"]').value;
       const confirmPassword = registerForm.querySelector('[name="password-confirm"]').value;
-      
+
       if (password !== confirmPassword) {
         showAuthMessage('Passwords do not match', 'error');
         return;
       }
-      
+
       try {
         showAuthMessage('Creating account...', 'info');
         await register(email, password, username);
@@ -105,7 +105,7 @@ function setupBasicFirebaseAuth() {
       }
     });
   }
-  
+
   // Set up logout button
   if (logoutButton) {
     logoutButton.addEventListener('click', async () => {
@@ -117,7 +117,7 @@ function setupBasicFirebaseAuth() {
       }
     });
   }
-  
+
   authInitialized = true;
 }
 
@@ -126,12 +126,12 @@ function setupBasicFirebaseAuth() {
  */
 function setupLocalAuth() {
   // Check if we're already logged in (server-side session)
-  fetch('/api/auth/me')
+  fetch('/auth/api/me')
     .then(response => response.json())
     .then(data => {
       if (data.authenticated) {
-        handleAuthStateChange({ 
-          email: data.email, 
+        handleAuthStateChange({
+          email: data.email,
           displayName: data.username,
           uid: data.id
         });
@@ -140,24 +140,29 @@ function setupLocalAuth() {
     .catch(error => {
       console.error('Error checking auth status:', error);
     });
-  
+
   // Set up login form
   if (loginForm) {
     loginForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const email = loginForm.querySelector('[name="email"]').value;
       const password = loginForm.querySelector('[name="password"]').value;
-      
+
       try {
         showAuthMessage('Logging in...', 'info');
         await login(email, password);
-        location.href = '/';
+        showAuthMessage('Login successful! Redirecting...', 'success');
+
+        // Add a small delay to show the success message before redirecting
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 1000);
       } catch (error) {
         showAuthMessage(`Login failed: ${error.message}`, 'error');
       }
     });
   }
-  
+
   // Set up register form
   if (registerForm) {
     registerForm.addEventListener('submit', async (e) => {
@@ -166,17 +171,17 @@ function setupLocalAuth() {
       const username = registerForm.querySelector('[name="username"]').value;
       const password = registerForm.querySelector('[name="password"]').value;
       const confirmPassword = registerForm.querySelector('[name="password-confirm"]').value;
-      
+
       if (password !== confirmPassword) {
         showAuthMessage('Passwords do not match', 'error');
         return;
       }
-      
+
       try {
         showAuthMessage('Creating account...', 'info');
         await register(email, password, username);
         showAuthMessage('Account created! You can now log in.', 'success');
-        
+
         // Redirect to login page or automatically log in
         setTimeout(() => {
           location.href = '/login';
@@ -186,19 +191,19 @@ function setupLocalAuth() {
       }
     });
   }
-  
+
   // Set up logout button
   if (logoutButton) {
     logoutButton.addEventListener('click', async () => {
       try {
-        await fetch('/api/auth/logout', { method: 'POST' });
+        await fetch('/auth/api/logout', { method: 'POST' });
         location.href = '/login';
       } catch (error) {
         showAuthMessage(`Logout failed: ${error.message}`, 'error');
       }
     });
   }
-  
+
   authInitialized = true;
 }
 
@@ -208,19 +213,19 @@ function setupLocalAuth() {
  */
 function handleAuthStateChange(user) {
   currentUser = user;
-  
+
   if (user) {
     console.log('User is signed in:', user.email);
-    
+
     // Update UI for logged in user
     document.body.classList.add('user-logged-in');
     document.body.classList.remove('user-logged-out');
-    
+
     // Update profile section if it exists
     if (userProfileSection) {
       updateUserProfile(user);
     }
-    
+
     // Send the Firebase token to the backend to create a session
     if (typeof firebase !== 'undefined' && isFirebaseInitialized()) {
       firebase.auth().currentUser.getIdToken(true)
@@ -243,11 +248,11 @@ function handleAuthStateChange(user) {
     }
   } else {
     console.log('User is signed out');
-    
+
     // Update UI for logged out user
     document.body.classList.remove('user-logged-in');
     document.body.classList.add('user-logged-out');
-    
+
     // Redirect to login page if not already there
     const currentPath = window.location.pathname;
     if (currentPath !== '/login' && currentPath !== '/register') {
@@ -262,7 +267,7 @@ function handleAuthStateChange(user) {
  */
 function updateUserProfile(user) {
   if (!userProfileSection) return;
-  
+
   // Get user details from the server
   fetch(`/api/users/profile`)
     .then(response => response.json())
@@ -271,20 +276,20 @@ function updateUserProfile(user) {
         console.error('Error fetching user profile:', data.error);
         return;
       }
-      
+
       // Update profile picture
       const profilePic = userProfileSection.querySelector('.profile-pic');
       if (profilePic) {
         profilePic.src = data.profile_pic || '/static/images/default-avatar.png';
         profilePic.alt = data.username;
       }
-      
+
       // Update username
       const usernameElement = userProfileSection.querySelector('.username');
       if (usernameElement) {
         usernameElement.textContent = data.username;
       }
-      
+
       // Update bio
       const bioElement = userProfileSection.querySelector('.bio');
       if (bioElement) {
@@ -302,12 +307,45 @@ function updateUserProfile(user) {
  * @param {string} type - Message type (success, error, info)
  */
 function showAuthMessage(message, type = 'info') {
-  if (!authMessage) return;
-  
+  if (!authMessage) {
+    // Create a floating message if authMessage element doesn't exist
+    const messageDiv = document.createElement('div');
+    messageDiv.style.position = 'fixed';
+    messageDiv.style.top = '20px';
+    messageDiv.style.left = '50%';
+    messageDiv.style.transform = 'translateX(-50%)';
+    messageDiv.style.zIndex = '9999';
+    messageDiv.style.padding = '15px 25px';
+    messageDiv.style.borderRadius = '5px';
+    messageDiv.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)';
+    messageDiv.style.fontSize = '16px';
+    messageDiv.style.fontWeight = 'bold';
+
+    if (type === 'success') {
+      messageDiv.style.backgroundColor = '#28a745';
+      messageDiv.style.color = 'white';
+    } else if (type === 'error') {
+      messageDiv.style.backgroundColor = '#dc3545';
+      messageDiv.style.color = 'white';
+    } else {
+      messageDiv.style.backgroundColor = '#17a2b8';
+      messageDiv.style.color = 'white';
+    }
+
+    messageDiv.textContent = message;
+    document.body.appendChild(messageDiv);
+
+    // Remove after 5 seconds
+    setTimeout(() => {
+      document.body.removeChild(messageDiv);
+    }, 5000);
+    return;
+  }
+
   authMessage.textContent = message;
   authMessage.className = `auth-message ${type}`;
   authMessage.style.display = 'block';
-  
+
   // Hide message after 5 seconds
   setTimeout(() => {
     authMessage.style.display = 'none';

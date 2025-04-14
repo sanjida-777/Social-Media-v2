@@ -6,7 +6,7 @@
   },
   "site": {
     "site_name": "SocialConnect",
-    "domain": "socialconnect.replit.app",
+    "domain": "",
     "logo_path": "/static/images/logo.svg",
     "favicon_path": "/static/images/favicon.ico",
     "theme": "dark",

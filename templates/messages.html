@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block title %}Messages with {{ other_user.username }}{% endblock %}
+
+{% block additional_css %}
+<style>
+    .messages-container {
+        height: 70vh;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .message {
+        max-width: 70%;
+        margin-bottom: 10px;
+        padding: 10px 15px;
+        border-radius: 18px;
+        position: relative;
+    }
+    
+    .message-sent {
+        align-self: flex-end;
+        background-color: var(--bs-primary);
+        color: white;
+        border-bottom-right-radius: 5px;
+    }
+    
+    .message-received {
+        align-self: flex-start;
+        background-color: var(--bs-dark-bg-subtle);
+        border-bottom-left-radius: 5px;
+    }
+    
+    .message-time {
+        font-size: 0.7rem;
+        opacity: 0.7;
+        margin-top: 5px;
+    }
+    
+    .message-input {
+        border-radius: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+                <img src="{{ other_user.profile_pic or url_for('static', filename='images/default-avatar.svg') }}" alt="{{ other_user.username }}" class="rounded-circle me-2" width="40" height="40">
+                <div>
+                    <h5 class="mb-0">{{ other_user.username }}</h5>
+                    <small class="text-muted">{{ 'Online' if other_user.is_active else 'Offline' }}</small>
+                </div>
+            </div>
+            <div>
+                <a href="{{ url_for('auth.profile', username=other_user.username) }}" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-person"></i> View Profile
+                </a>
+            </div>
+        </div>
+        
+        <div class="card-body p-0">
+            <div class="messages-container p-3" id="messages-container">
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="message {{ 'message-sent' if message.sender_id == g.user.id else 'message-received' }}">
+                            {{ message.content }}
+                            <div class="message-time">{{ message.created_at|humanize }}</div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center text-muted my-5">
+                        <i class="bi bi-chat-dots fs-1"></i>
+                        <p class="mt-3">No messages yet. Start a conversation!</p>
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="p-3 border-top">
+                <form id="message-form" class="d-flex">
+                    <input type="text" class="form-control message-input me-2" id="message-input" placeholder="Type a message...">
+                    <button type="submit" class="btn btn-primary rounded-circle">
+                        <i class="bi bi-send"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block additional_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const messagesContainer = document.getElementById('messages-container');
+        const messageForm = document.getElementById('message-form');
+        const messageInput = document.getElementById('message-input');
+        
+        // Scroll to bottom of messages
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        
+        // Handle message submission
+        messageForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const message = messageInput.value.trim();
+            if (!message) return;
+            
+            // Send message to server
+            fetch('/api/messages/send', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    recipient_id: {{ other_user.id }},
+                    content: message
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Add message to UI
+                    const messageElement = document.createElement('div');
+                    messageElement.className = 'message message-sent';
+                    messageElement.innerHTML = `
+                        ${message}
+                        <div class="message-time">Just now</div>
+                    `;
+                    messagesContainer.appendChild(messageElement);
+                    
+                    // Clear input
+                    messageInput.value = '';
+                    
+                    // Scroll to bottom
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                } else {
+                    alert('Error sending message: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error sending message:', error);
+                alert('An error occurred. Please try again.');
+            });
+        });
+        
+        // Set up real-time updates (would use WebSockets in a real implementation)
+        // This is just a placeholder for demonstration
+        function checkForNewMessages() {
+            // In a real implementation, this would use WebSockets or long polling
+            console.log('Checking for new messages...');
+            
+            // Simulated check every 10 seconds
+            setTimeout(checkForNewMessages, 10000);
+        }
+        
+        // Start checking for new messages
+        checkForNewMessages();
+    });
+</script>
+{% endblock %}

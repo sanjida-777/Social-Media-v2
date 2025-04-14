@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}Messages{% endblock %}
+
+{% block additional_css %}
+<style>
+    .conversation-list {
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+    
+    .conversation-item {
+        padding: 15px;
+        border-bottom: 1px solid var(--bs-border-color);
+        transition: background-color 0.2s;
+    }
+    
+    .conversation-item:hover {
+        background-color: var(--bs-dark-bg-subtle);
+        cursor: pointer;
+    }
+    
+    .conversation-item.active {
+        background-color: var(--bs-primary-bg-subtle);
+        border-left: 3px solid var(--bs-primary);
+    }
+    
+    .conversation-avatar {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+    
+    .conversation-preview {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 200px;
+    }
+    
+    .unread-badge {
+        background-color: var(--bs-primary);
+        color: white;
+        font-size: 0.7rem;
+        padding: 3px 6px;
+        border-radius: 10px;
+    }
+    
+    .search-box {
+        position: sticky;
+        top: 0;
+        background-color: var(--bs-body-bg);
+        padding: 15px;
+        z-index: 10;
+        border-bottom: 1px solid var(--bs-border-color);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="card">
+        <div class="card-header">
+            <h4 class="mb-0">Messages</h4>
+        </div>
+        <div class="card-body p-0">
+            <div class="row g-0">
+                <!-- Conversation List -->
+                <div class="col-md-4 border-end">
+                    <div class="search-box">
+                        <div class="input-group">
+                            <input type="text" class="form-control" placeholder="Search messages" id="message-search">
+                            <button class="btn btn-outline-secondary" type="button">
+                                <i class="bi bi-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="conversation-list">
+                        {% if conversations %}
+                            {% for conversation in conversations %}
+                            <div class="conversation-item d-flex align-items-center" onclick="location.href='{{ url_for('auth.messages', username=conversation.user.username) }}'">
+                                <img src="{{ conversation.user.profile_pic or url_for('static', filename='images/default-avatar.svg') }}" alt="{{ conversation.user.username }}" class="conversation-avatar me-3">
+                                <div class="flex-grow-1">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h6 class="mb-0">{{ conversation.user.username }}</h6>
+                                        <small class="text-muted">{{ conversation.last_message.created_at|humanize }}</small>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <p class="mb-0 text-muted conversation-preview">
+                                            {% if conversation.last_message.sender_id == g.user.id %}
+                                                <span class="text-muted">You: </span>
+                                            {% endif %}
+                                            {{ conversation.last_message.content }}
+                                        </p>
+                                        {% if conversation.unread_count > 0 %}
+                                        <span class="unread-badge">{{ conversation.unread_count }}</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center py-5">
+                                <i class="bi bi-chat-dots fs-1 text-muted mb-3"></i>
+                                <h5>No messages yet</h5>
+                                <p class="text-muted">Start a conversation with a friend</p>
+                                <a href="{{ url_for('auth.friends') }}" class="btn btn-primary mt-2">Find Friends</a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Welcome Screen -->
+                <div class="col-md-8 d-flex align-items-center justify-content-center" style="min-height: 500px;">
+                    <div class="text-center p-4">
+                        <i class="bi bi-chat-square-text fs-1 text-muted mb-3"></i>
+                        <h4>Your Messages</h4>
+                        <p class="text-muted">Select a conversation or start a new one</p>
+                        <a href="{{ url_for('auth.friends') }}" class="btn btn-primary mt-2">
+                            <i class="bi bi-plus-circle me-2"></i> New Message
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block additional_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.getElementById('message-search');
+        const conversationItems = document.querySelectorAll('.conversation-item');
+        
+        if (searchInput) {
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                
+                conversationItems.forEach(item => {
+                    const username = item.querySelector('h6').textContent.toLowerCase();
+                    const preview = item.querySelector('.conversation-preview').textContent.toLowerCase();
+                    
+                    if (username.includes(searchTerm) || preview.includes(searchTerm)) {
+                        item.style.display = 'flex';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+            });
+        }
+    });
+</script>
+{% endblock %}

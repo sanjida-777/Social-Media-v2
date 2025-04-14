@@ -2,7 +2,7 @@ from datetime import datetime
 import json
 from flask_login import UserMixin
 from sqlalchemy import event, func
-from app import db
+from database import db
 
 class FileUpload(db.Model):
     """
