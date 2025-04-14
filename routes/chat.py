@@ -1,421 +1,471 @@
-import os
+import json
+import time
 import logging
 from datetime import datetime
-from flask import Blueprint, render_template, request, redirect, url_for, flash, g, jsonify
-from sqlalchemy import or_, and_
+from urllib.parse import quote_plus
+from flask import Blueprint, render_template, g, request, jsonify, abort
+from sqlalchemy import desc
 
-from app import app, db, socketio, save_photo
-from models import User, ChatGroup, ChatMember, ChatMessage, MessageReadReceipt, Friend, Notification
+from app import db
+from models import User, ChatGroup, ChatMember, ChatMessage, MessageReadReceipt
+from utils.mqtt_client import get_mqtt_client
 from routes.auth import login_required
-from flask_socketio import emit, join_room, leave_room
 
 # Set up logger
 logger = logging.getLogger(__name__)
 
-# Create Blueprint
-chat_bp = Blueprint('chat', __name__)
+# Create blueprint
+chat_bp = Blueprint('chat', __name__, url_prefix='/chat')
 
-@chat_bp.route('/messages')
+@chat_bp.route('/')
 @login_required
 def messages():
-    return render_template('chat.html')
+    """Chat interface showing all conversations"""
+    return render_template('chat/index.html')
 
 @chat_bp.route('/api/chats')
 @login_required
 def get_chats():
-    # Get all chat groups where the user is a member
-    chat_memberships = ChatMember.query.filter_by(user_id=g.user.id).all()
-    chat_ids = [m.chat_id for m in chat_memberships]
+    """Get all chats for the current user"""
+    # Get all chat groups where user is a member
+    memberships = ChatMember.query.filter_by(user_id=g.user.id).all()
+    chat_ids = [membership.chat_id for membership in memberships]
     
-    # Get the chat groups with the latest message
-    chats = []
-    for chat_id in chat_ids:
-        chat_group = ChatGroup.query.get(chat_id)
+    chats = ChatGroup.query.filter(ChatGroup.id.in_(chat_ids)).all()
+    
+    result = []
+    for chat in chats:
+        # Get last message
+        last_message = ChatMessage.query.filter_by(
+            chat_id=chat.id, 
+            is_deleted=False
+        ).order_by(desc(ChatMessage.created_at)).first()
         
-        # Get the latest message
-        latest_message = ChatMessage.query.filter_by(chat_id=chat_id).order_by(ChatMessage.created_at.desc()).first()
+        # Get unread count
+        member = ChatMember.query.filter_by(
+            chat_id=chat.id,
+            user_id=g.user.id
+        ).first()
         
-        # Get unread messages count
-        member = ChatMember.query.filter_by(chat_id=chat_id, user_id=g.user.id).first()
         unread_count = 0
-        
         if member and member.last_read:
             unread_count = ChatMessage.query.filter(
-                ChatMessage.chat_id == chat_id,
+                ChatMessage.chat_id == chat.id,
                 ChatMessage.created_at > member.last_read,
-                ChatMessage.user_id != g.user.id
+                ChatMessage.user_id != g.user.id,
+                ChatMessage.is_deleted == False
             ).count()
         
-        # For direct messages, get the other user's info
+        # Check if this is a direct message
         other_user = None
-        if not chat_group.is_group:
+        if not chat.is_group:
             other_member = ChatMember.query.filter(
-                ChatMember.chat_id == chat_id,
+                ChatMember.chat_id == chat.id,
                 ChatMember.user_id != g.user.id
             ).first()
             
             if other_member:
                 other_user = User.query.get(other_member.user_id)
         
-        chat_data = chat_group.serialize()
-        chat_data['unread_count'] = unread_count
+        chat_data = {
+            'id': chat.id,
+            'name': chat.name,
+            'is_group': chat.is_group,
+            'created_at': chat.created_at.isoformat(),
+            'unread_count': unread_count,
+            'last_message': last_message.serialize() if last_message else None,
+            'other_user': other_user.serialize() if other_user else None
+        }
         
-        if other_user:
-            chat_data['name'] = other_user.username
-            chat_data['profile_pic'] = other_user.profile_pic
-        
-        chats.append(chat_data)
+        result.append(chat_data)
     
-    # Sort chats by latest message
-    chats.sort(key=lambda x: x['updated_at'] if 'updated_at' in x else '', reverse=True)
-    
-    return jsonify({
-        'chats': chats
-    })
+    return jsonify(result)
 
-@chat_bp.route('/chat/<int:chat_id>')
+@chat_bp.route('/<int:chat_id>')
 @login_required
 def view_chat(chat_id):
+    """View a specific chat"""
     # Check if user is a member of this chat
-    member = ChatMember.query.filter_by(chat_id=chat_id, user_id=g.user.id).first()
+    member = ChatMember.query.filter_by(
+        chat_id=chat_id,
+        user_id=g.user.id
+    ).first()
     
     if not member:
-        flash('You are not a member of this chat', 'danger')
-        return redirect(url_for('chat.messages'))
+        abort(403)
     
-    chat_group = ChatGroup.query.get_or_404(chat_id)
+    chat = ChatGroup.query.get_or_404(chat_id)
     
-    # Update last_read
-    member.last_read = datetime.utcnow()
-    db.session.commit()
-    
-    if chat_group.is_group:
-        return render_template('chat_group.html', chat=chat_group)
-    else:
-        # For direct messages, get the other user
-        other_member = ChatMember.query.filter(
-            ChatMember.chat_id == chat_id,
-            ChatMember.user_id != g.user.id
-        ).first()
-        
-        other_user = User.query.get(other_member.user_id) if other_member else None
-        
-        return render_template('chat.html', chat=chat_group, other_user=other_user)
+    return render_template('chat/view.html', chat=chat)
 
-@chat_bp.route('/api/chat/<int:chat_id>/messages')
+@chat_bp.route('/api/chats/<int:chat_id>/messages')
 @login_required
 def get_chat_messages(chat_id):
+    """Get messages for a specific chat"""
     # Check if user is a member of this chat
-    member = ChatMember.query.filter_by(chat_id=chat_id, user_id=g.user.id).first()
+    member = ChatMember.query.filter_by(
+        chat_id=chat_id,
+        user_id=g.user.id
+    ).first()
     
     if not member:
-        return jsonify({'error': 'You are not a member of this chat'}), 403
+        return jsonify({'error': 'Unauthorized'}), 403
     
+    # Get pagination parameters
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 20, type=int)
     
-    # Get messages for the chat with pagination (newest first, then reverse for display)
-    messages = ChatMessage.query.filter_by(chat_id=chat_id).order_by(ChatMessage.created_at.desc())
-    total_messages = messages.count()
+    # Get messages with pagination
+    messages = ChatMessage.query.filter_by(
+        chat_id=chat_id,
+        is_deleted=False
+    ).order_by(desc(ChatMessage.created_at)).paginate(
+        page=page, per_page=per_page, error_out=False
+    )
     
-    messages = messages.offset((page - 1) * per_page).limit(per_page).all()
-    messages.reverse()  # Reverse to show oldest first
-    
-    # Update last_read
+    # Update last read timestamp
     member.last_read = datetime.utcnow()
     db.session.commit()
     
-    # Serialize messages
-    serialized_messages = [message.serialize() for message in messages]
-    
-    return jsonify({
-        'messages': serialized_messages,
+    # Format response
+    result = {
+        'messages': [message.serialize() for message in messages.items],
         'pagination': {
-            'current_page': page,
-            'per_page': per_page,
-            'total_messages': total_messages,
-            'total_pages': (total_messages + per_page - 1) // per_page
+            'page': messages.page,
+            'per_page': messages.per_page,
+            'total': messages.total,
+            'pages': messages.pages,
+            'has_next': messages.has_next,
+            'has_prev': messages.has_prev
         }
-    })
+    }
+    
+    return jsonify(result)
 
-@chat_bp.route('/api/chat/create', methods=['POST'])
+@chat_bp.route('/api/chats/create', methods=['POST'])
 @login_required
 def create_chat():
-    if request.is_json:
-        data = request.get_json()
-        is_group = data.get('is_group', False)
-        name = data.get('name', '').strip() if is_group else None
-        member_ids = data.get('member_ids', [])
-        
-        # For direct messages, we need exactly one other user
-        if not is_group and len(member_ids) != 1:
-            return jsonify({'error': 'Direct messages require exactly one recipient'}), 400
-        
-        # For group chats, we need at least 2 other users (3 total including creator)
-        if is_group and len(member_ids) < 2:
-            return jsonify({'error': 'Group chats require at least 3 members (including you)'}), 400
-        
-        # For group chats, we need at most 99 other users (100 total including creator)
-        if is_group and len(member_ids) > 99:
-            return jsonify({'error': 'Group chats can have at most 100 members (including you)'}), 400
-        
-        # Check if users exist and are friends with the creator
-        for member_id in member_ids:
-            user = User.query.get(member_id)
-            if not user:
-                return jsonify({'error': f'User with ID {member_id} not found'}), 404
-            
-            # Only for direct messages, check if they are friends
-            if not is_group:
-                friendship = Friend.query.filter(
-                    or_(
-                        and_(Friend.user_id == g.user.id, Friend.friend_id == member_id),
-                        and_(Friend.user_id == member_id, Friend.friend_id == g.user.id)
-                    ),
-                    Friend.status == 'accepted'
-                ).first()
-                
-                if not friendship:
-                    return jsonify({'error': f'You must be friends with the recipient to start a chat'}), 403
-        
-        # For direct messages, check if a chat already exists
-        if not is_group:
-            other_user_id = member_ids[0]
-            
-            # Look for existing direct message chats between these users
-            existing_chats = db.session.query(ChatGroup).join(ChatMember, ChatGroup.id == ChatMember.chat_id).filter(
-                ChatGroup.is_group == False,
-                ChatMember.user_id == g.user.id
-            ).all()
-            
-            for chat in existing_chats:
-                # Check if the other user is also a member
-                other_member = ChatMember.query.filter_by(chat_id=chat.id, user_id=other_user_id).first()
-                if other_member:
-                    # Chat already exists, return it
-                    return jsonify({
-                        'success': True,
-                        'chat': chat.serialize(),
-                        'existing': True
-                    })
-        
-        # Create the chat group
-        chat_group = ChatGroup(
-            name=name,
-            created_by=g.user.id,
-            is_group=is_group
-        )
-        db.session.add(chat_group)
-        db.session.flush()  # Get chat ID without committing
-        
-        # Add creator as admin
-        creator_member = ChatMember(
-            chat_id=chat_group.id,
-            user_id=g.user.id,
-            role='admin' if is_group else 'member',
-            last_read=datetime.utcnow()
-        )
-        db.session.add(creator_member)
-        
-        # Add other members
-        for member_id in member_ids:
-            member = ChatMember(
-                chat_id=chat_group.id,
-                user_id=member_id,
-                role='member',
-                last_read=None
-            )
-            db.session.add(member)
-        
-        db.session.commit()
-        
-        return jsonify({
-            'success': True,
-            'chat': chat_group.serialize(),
-            'existing': False
-        })
-    else:
-        return jsonify({'error': 'Request must be JSON'}), 400
-
-@chat_bp.route('/api/chat/<int:chat_id>/members')
-@login_required
-def get_chat_members(chat_id):
-    # Check if user is a member of this chat
-    member = ChatMember.query.filter_by(chat_id=chat_id, user_id=g.user.id).first()
+    """Create a new chat"""
+    data = request.json
     
-    if not member:
-        return jsonify({'error': 'You are not a member of this chat'}), 403
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
     
-    # Get all members of the chat
-    members = ChatMember.query.filter_by(chat_id=chat_id).all()
+    # Check required fields
+    if data.get('is_group') and not data.get('name'):
+        return jsonify({'error': 'Group chats require a name'}), 400
     
-    # Serialize members
-    serialized_members = [member.serialize() for member in members]
+    if not data.get('is_group') and not data.get('user_id'):
+        return jsonify({'error': 'Direct messages require a user ID'}), 400
     
-    return jsonify({
-        'members': serialized_members
-    })
-
-@chat_bp.route('/api/chat/<int:chat_id>/add_member', methods=['POST'])
-@login_required
-def add_chat_member(chat_id):
-    # Check if user is an admin of this chat
-    admin = ChatMember.query.filter_by(chat_id=chat_id, user_id=g.user.id, role='admin').first()
-    
-    if not admin:
-        return jsonify({'error': 'You must be an admin to add members'}), 403
-    
-    if request.is_json:
-        data = request.get_json()
-        user_id = data.get('user_id')
+    # If direct message, check if chat already exists
+    if not data.get('is_group'):
+        other_user_id = data.get('user_id')
+        other_user = User.query.get(other_user_id)
         
-        if not user_id:
-            return jsonify({'error': 'User ID is required'}), 400
+        if not other_user:
+            return jsonify({'error': 'User not found'}), 404
         
-        # Check if user exists
-        user = User.query.get(user_id)
-        if not user:
-            return jsonify({'error': f'User with ID {user_id} not found'}), 404
+        # Check for existing direct message chat
+        existing_chats = db.session.query(ChatGroup).join(
+            ChatMember, ChatGroup.id == ChatMember.chat_id
+        ).filter(
+            ChatGroup.is_group == False,
+            ChatMember.user_id == g.user.id
+        ).all()
         
-        # Check if user is already a member
-        existing_member = ChatMember.query.filter_by(chat_id=chat_id, user_id=user_id).first()
-        if existing_member:
-            return jsonify({'error': 'User is already a member of this chat'}), 409
-        
-        # Get current member count
-        member_count = ChatMember.query.filter_by(chat_id=chat_id).count()
-        if member_count >= 100:
-            return jsonify({'error': 'Chat group has reached maximum member limit (100)'}), 400
-        
-        # Add user as member
-        member = ChatMember(
-            chat_id=chat_id,
-            user_id=user_id,
-            role='member',
-            last_read=None
-        )
-        db.session.add(member)
-        db.session.commit()
-        
-        # Notify the user
-        chat_group = ChatGroup.query.get(chat_id)
-        notification = Notification(
-            user_id=user_id,
-            notification_type='chat_invite',
-            sender_id=g.user.id,
-            reference_id=chat_id,
-            content=f"{g.user.username} added you to the chat '{chat_group.name}'"
-        )
-        db.session.add(notification)
-        db.session.commit()
-        
-        return jsonify({
-            'success': True,
-            'member': member.serialize()
-        })
-    else:
-        return jsonify({'error': 'Request must be JSON'}), 400
-
-@chat_bp.route('/api/chat/<int:chat_id>/remove_member', methods=['POST'])
-@login_required
-def remove_chat_member(chat_id):
-    # Check if user is an admin of this chat
-    admin = ChatMember.query.filter_by(chat_id=chat_id, user_id=g.user.id, role='admin').first()
-    
-    if not admin:
-        return jsonify({'error': 'You must be an admin to remove members'}), 403
-    
-    if request.is_json:
-        data = request.get_json()
-        user_id = data.get('user_id')
-        
-        if not user_id:
-            return jsonify({'error': 'User ID is required'}), 400
-        
-        # Cannot remove self if you're the only admin
-        if user_id == g.user.id:
-            # Check if there are other admins
-            other_admins = ChatMember.query.filter(
-                ChatMember.chat_id == chat_id,
-                ChatMember.role == 'admin',
-                ChatMember.user_id != g.user.id
+        for chat in existing_chats:
+            # Check if other user is also a member
+            other_member = ChatMember.query.filter_by(
+                chat_id=chat.id,
+                user_id=other_user_id
             ).first()
             
-            if not other_admins:
-                return jsonify({'error': 'You cannot remove yourself as you are the only admin'}), 400
+            if other_member:
+                return jsonify({'id': chat.id})
         
-        # Check if user is a member
-        member = ChatMember.query.filter_by(chat_id=chat_id, user_id=user_id).first()
-        if not member:
-            return jsonify({'error': 'User is not a member of this chat'}), 404
+        # Create new direct message chat
+        chat_name = f"{g.user.username}, {other_user.username}"
+        chat = ChatGroup(
+            name=chat_name,
+            created_by=g.user.id,
+            is_group=False
+        )
         
-        # Remove user
-        db.session.delete(member)
+        db.session.add(chat)
+        db.session.flush()  # Get chat ID without committing
+        
+        # Add members
+        members = [
+            ChatMember(chat_id=chat.id, user_id=g.user.id, role='admin'),
+            ChatMember(chat_id=chat.id, user_id=other_user_id, role='member')
+        ]
+        db.session.add_all(members)
         db.session.commit()
         
-        return jsonify({
-            'success': True
-        })
-    else:
-        return jsonify({'error': 'Request must be JSON'}), 400
-
-@chat_bp.route('/api/chat/<int:chat_id>/make_admin', methods=['POST'])
-@login_required
-def make_chat_admin(chat_id):
-    # Check if user is an admin of this chat
-    admin = ChatMember.query.filter_by(chat_id=chat_id, user_id=g.user.id, role='admin').first()
+        return jsonify({'id': chat.id})
     
-    if not admin:
-        return jsonify({'error': 'You must be an admin to promote members'}), 403
+    # Create group chat
+    chat = ChatGroup(
+        name=data.get('name'),
+        created_by=g.user.id,
+        is_group=True
+    )
     
-    if request.is_json:
-        data = request.get_json()
-        user_id = data.get('user_id')
-        
-        if not user_id:
-            return jsonify({'error': 'User ID is required'}), 400
-        
-        # Check if user is a member
-        member = ChatMember.query.filter_by(chat_id=chat_id, user_id=user_id).first()
-        if not member:
-            return jsonify({'error': 'User is not a member of this chat'}), 404
-        
-        # Promote to admin
-        member.role = 'admin'
-        db.session.commit()
-        
-        return jsonify({
-            'success': True,
-            'member': member.serialize()
-        })
-    else:
-        return jsonify({'error': 'Request must be JSON'}), 400
+    db.session.add(chat)
+    db.session.flush()  # Get chat ID without committing
+    
+    # Add creator as admin
+    member = ChatMember(
+        chat_id=chat.id,
+        user_id=g.user.id,
+        role='admin'
+    )
+    db.session.add(member)
+    
+    # Add other members if provided
+    if data.get('members'):
+        for user_id in data.get('members'):
+            if user_id != g.user.id:  # Skip creator
+                user = User.query.get(user_id)
+                if user:
+                    member = ChatMember(
+                        chat_id=chat.id,
+                        user_id=user_id,
+                        role='member'
+                    )
+                    db.session.add(member)
+    
+    db.session.commit()
+    
+    return jsonify({'id': chat.id})
 
-@chat_bp.route('/api/chat/<int:chat_id>/leave', methods=['POST'])
+@chat_bp.route('/api/chats/<int:chat_id>/members')
 @login_required
-def leave_chat(chat_id):
+def get_chat_members(chat_id):
+    """Get members of a chat"""
     # Check if user is a member of this chat
-    member = ChatMember.query.filter_by(chat_id=chat_id, user_id=g.user.id).first()
+    member = ChatMember.query.filter_by(
+        chat_id=chat_id,
+        user_id=g.user.id
+    ).first()
     
     if not member:
-        return jsonify({'error': 'You are not a member of this chat'}), 403
+        return jsonify({'error': 'Unauthorized'}), 403
     
-    chat_group = ChatGroup.query.get_or_404(chat_id)
+    # Get all members
+    members = ChatMember.query.filter_by(chat_id=chat_id).all()
     
-    # If this is a direct message, we need to handle differently
-    if not chat_group.is_group:
-        return jsonify({'error': 'You cannot leave a direct message chat'}), 400
+    result = []
+    for member in members:
+        user = User.query.get(member.user_id)
+        if user:
+            result.append({
+                'user': user.serialize(),
+                'role': member.role,
+                'joined_at': member.joined_at.isoformat()
+            })
     
-    # If user is an admin, check if there are other admins
+    return jsonify(result)
+
+@chat_bp.route('/api/chats/<int:chat_id>/members/add', methods=['POST'])
+@login_required
+def add_chat_member(chat_id):
+    """Add a member to a chat"""
+    # Check if user is an admin of this chat
+    member = ChatMember.query.filter_by(
+        chat_id=chat_id,
+        user_id=g.user.id,
+        role='admin'
+    ).first()
+    
+    if not member:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    # Check if chat is a group
+    chat = ChatGroup.query.get_or_404(chat_id)
+    if not chat.is_group:
+        return jsonify({'error': 'Cannot add members to direct messages'}), 400
+    
+    data = request.json
+    if not data or not data.get('user_id'):
+        return jsonify({'error': 'No user ID provided'}), 400
+    
+    user_id = data.get('user_id')
+    user = User.query.get(user_id)
+    
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    
+    # Check if user is already a member
+    existing_member = ChatMember.query.filter_by(
+        chat_id=chat_id,
+        user_id=user_id
+    ).first()
+    
+    if existing_member:
+        return jsonify({'error': 'User is already a member'}), 400
+    
+    # Add new member
+    new_member = ChatMember(
+        chat_id=chat_id,
+        user_id=user_id,
+        role='member'
+    )
+    db.session.add(new_member)
+    db.session.commit()
+    
+    # Create system message
+    system_message = ChatMessage(
+        chat_id=chat_id,
+        user_id=g.user.id,
+        message_type='system',
+        content=f"{g.user.username} added {user.username} to the chat"
+    )
+    db.session.add(system_message)
+    db.session.commit()
+    
+    return jsonify({'success': True})
+
+@chat_bp.route('/api/chats/<int:chat_id>/members/remove', methods=['POST'])
+@login_required
+def remove_chat_member(chat_id):
+    """Remove a member from a chat"""
+    # Check if user is an admin of this chat
+    member = ChatMember.query.filter_by(
+        chat_id=chat_id,
+        user_id=g.user.id,
+        role='admin'
+    ).first()
+    
+    if not member:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    # Check if chat is a group
+    chat = ChatGroup.query.get_or_404(chat_id)
+    if not chat.is_group:
+        return jsonify({'error': 'Cannot remove members from direct messages'}), 400
+    
+    data = request.json
+    if not data or not data.get('user_id'):
+        return jsonify({'error': 'No user ID provided'}), 400
+    
+    user_id = data.get('user_id')
+    
+    # Cannot remove self
+    if user_id == g.user.id:
+        return jsonify({'error': 'Cannot remove yourself from the chat'}), 400
+    
+    # Check if user is a member
+    member_to_remove = ChatMember.query.filter_by(
+        chat_id=chat_id,
+        user_id=user_id
+    ).first()
+    
+    if not member_to_remove:
+        return jsonify({'error': 'User is not a member of this chat'}), 400
+    
+    # Get user for system message
+    user = User.query.get(user_id)
+    
+    # Remove member
+    db.session.delete(member_to_remove)
+    
+    # Create system message
+    system_message = ChatMessage(
+        chat_id=chat_id,
+        user_id=g.user.id,
+        message_type='system',
+        content=f"{g.user.username} removed {user.username} from the chat"
+    )
+    db.session.add(system_message)
+    db.session.commit()
+    
+    return jsonify({'success': True})
+
+@chat_bp.route('/api/chats/<int:chat_id>/admin', methods=['POST'])
+@login_required
+def make_chat_admin(chat_id):
+    """Make a user an admin of a chat"""
+    # Check if user is an admin of this chat
+    member = ChatMember.query.filter_by(
+        chat_id=chat_id,
+        user_id=g.user.id,
+        role='admin'
+    ).first()
+    
+    if not member:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    # Check if chat is a group
+    chat = ChatGroup.query.get_or_404(chat_id)
+    if not chat.is_group:
+        return jsonify({'error': 'Cannot change admin status in direct messages'}), 400
+    
+    data = request.json
+    if not data or not data.get('user_id'):
+        return jsonify({'error': 'No user ID provided'}), 400
+    
+    user_id = data.get('user_id')
+    
+    # Check if user is a member
+    member_to_promote = ChatMember.query.filter_by(
+        chat_id=chat_id,
+        user_id=user_id
+    ).first()
+    
+    if not member_to_promote:
+        return jsonify({'error': 'User is not a member of this chat'}), 400
+    
+    # Already an admin
+    if member_to_promote.role == 'admin':
+        return jsonify({'error': 'User is already an admin'}), 400
+    
+    # Get user for system message
+    user = User.query.get(user_id)
+    
+    # Promote to admin
+    member_to_promote.role = 'admin'
+    
+    # Create system message
+    system_message = ChatMessage(
+        chat_id=chat_id,
+        user_id=g.user.id,
+        message_type='system',
+        content=f"{g.user.username} made {user.username} an admin"
+    )
+    db.session.add(system_message)
+    db.session.commit()
+    
+    return jsonify({'success': True})
+
+@chat_bp.route('/api/chats/<int:chat_id>/leave', methods=['POST'])
+@login_required
+def leave_chat(chat_id):
+    """Leave a chat"""
+    # Check if user is a member of this chat
+    member = ChatMember.query.filter_by(
+        chat_id=chat_id,
+        user_id=g.user.id
+    ).first()
+    
+    if not member:
+        return jsonify({'error': 'Not a member of this chat'}), 403
+    
+    # Check if chat is a group
+    chat = ChatGroup.query.get_or_404(chat_id)
+    if not chat.is_group:
+        return jsonify({'error': 'Cannot leave direct messages'}), 400
+    
+    # Check if user is the only admin
     if member.role == 'admin':
-        other_admins = ChatMember.query.filter(
-            ChatMember.chat_id == chat_id,
-            ChatMember.role == 'admin',
-            ChatMember.user_id != g.user.id
-        ).first()
+        admin_count = ChatMember.query.filter_by(
+            chat_id=chat_id,
+            role='admin'
+        ).count()
         
-        # If no other admins, promote someone else if possible
-        if not other_admins:
+        if admin_count == 1:
+            # Find another member to promote
             other_member = ChatMember.query.filter(
                 ChatMember.chat_id == chat_id,
                 ChatMember.user_id != g.user.id
@@ -423,205 +473,305 @@ def leave_chat(chat_id):
             
             if other_member:
                 other_member.role = 'admin'
+            else:
+                # No other members, delete the chat
+                chat_messages = ChatMessage.query.filter_by(chat_id=chat_id).all()
+                for message in chat_messages:
+                    db.session.delete(message)
+                
+                db.session.delete(chat)
+                db.session.delete(member)
                 db.session.commit()
+                
+                return jsonify({'success': True})
     
-    # Leave the chat
+    # Create system message
+    system_message = ChatMessage(
+        chat_id=chat_id,
+        user_id=g.user.id,
+        message_type='system',
+        content=f"{g.user.username} left the chat"
+    )
+    db.session.add(system_message)
+    
+    # Remove user from chat
     db.session.delete(member)
     db.session.commit()
     
-    return jsonify({
-        'success': True
-    })
+    return jsonify({'success': True})
 
-# Socket.IO event handlers
-@socketio.on('connect')
+# MQTT-based real-time chat
+
+# Initialize MQTT client for the module
+mqtt_client = None
+
+def get_chat_mqtt_client():
+    """Get or create the MQTT client for chat"""
+    global mqtt_client
+    if mqtt_client is None:
+        mqtt_client = get_mqtt_client('socialconnect_chat')
+    return mqtt_client
+
+def get_chat_topic(chat_id):
+    """Get the MQTT topic for a chat"""
+    return f"socialconnect/chat/{chat_id}"
+
+@chat_bp.route('/api/mqtt/connect', methods=['POST'])
+@login_required
 def handle_connect():
-    if g.user:
-        logger.debug(f"User {g.user.id} connected to Socket.IO")
-        
-        # Join all chat rooms that the user is a member of
-        chat_memberships = ChatMember.query.filter_by(user_id=g.user.id).all()
-        for membership in chat_memberships:
-            join_room(f'chat_{membership.chat_id}')
-        
-        # Join user's personal notification room
-        join_room(f'user_{g.user.id}')
+    """Connect to MQTT broker"""
+    client = get_chat_mqtt_client()
+    
+    # Connection handled internally in get_mqtt_client
+    if client.connected:
+        return jsonify({'success': True})
     else:
-        logger.debug("Anonymous user connected to Socket.IO")
+        success = client.connect()
+        return jsonify({'success': success})
 
-@socketio.on('disconnect')
+@chat_bp.route('/api/mqtt/disconnect', methods=['POST'])
+@login_required
 def handle_disconnect():
-    if g.user:
-        logger.debug(f"User {g.user.id} disconnected from Socket.IO")
-    else:
-        logger.debug("Anonymous user disconnected from Socket.IO")
+    """Disconnect from MQTT broker"""
+    client = get_chat_mqtt_client()
+    client.disconnect()
+    return jsonify({'success': True})
 
-@socketio.on('join_chat')
-def handle_join_chat(data):
-    chat_id = data.get('chat_id')
+@chat_bp.route('/api/mqtt/join', methods=['POST'])
+@login_required
+def handle_join_chat(chat_id=None):
+    """Join a chat's MQTT topic"""
+    data = request.json
+    if not data and not chat_id:
+        return jsonify({'error': 'No chat ID provided'}), 400
     
-    if not g.user:
-        return
+    chat_id = chat_id or data.get('chat_id')
+    if not chat_id:
+        return jsonify({'error': 'No chat ID provided'}), 400
     
     # Check if user is a member of this chat
-    member = ChatMember.query.filter_by(chat_id=chat_id, user_id=g.user.id).first()
-    
-    if member:
-        join_room(f'chat_{chat_id}')
-        logger.debug(f"User {g.user.id} joined room chat_{chat_id}")
-        
-        # Update last_read
-        member.last_read = datetime.utcnow()
-        db.session.commit()
-
-@socketio.on('leave_chat')
-def handle_leave_chat(data):
-    chat_id = data.get('chat_id')
-    
-    if not g.user:
-        return
-    
-    leave_room(f'chat_{chat_id}')
-    logger.debug(f"User {g.user.id} left room chat_{chat_id}")
-
-@socketio.on('send_message')
-def handle_send_message(data):
-    chat_id = data.get('chat_id')
-    content = data.get('content', '').strip()
-    message_type = data.get('message_type', 'text')
-    
-    if not g.user:
-        return {'error': 'You must be logged in'}
-    
-    # Check if user is a member of this chat
-    member = ChatMember.query.filter_by(chat_id=chat_id, user_id=g.user.id).first()
+    member = ChatMember.query.filter_by(
+        chat_id=chat_id,
+        user_id=g.user.id
+    ).first()
     
     if not member:
-        return {'error': 'You are not a member of this chat'}
+        return jsonify({'error': 'Not a member of this chat'}), 403
     
-    # Create message
+    # Subscribe to chat topic
+    client = get_chat_mqtt_client()
+    topic = get_chat_topic(chat_id)
+    
+    def on_message(payload):
+        """Handle incoming MQTT messages (for testing)"""
+        logger.debug(f"Received MQTT message on topic {topic}: {payload}")
+    
+    success = client.subscribe(topic, on_message)
+    
+    # Update presence status
+    presence_payload = {
+        'type': 'presence',
+        'action': 'join',
+        'user_id': g.user.id,
+        'username': g.user.username,
+        'timestamp': datetime.utcnow().isoformat()
+    }
+    client.publish(topic, presence_payload)
+    
+    return jsonify({'success': success})
+
+@chat_bp.route('/api/mqtt/leave', methods=['POST'])
+@login_required
+def handle_leave_chat(chat_id=None):
+    """Leave a chat's MQTT topic"""
+    data = request.json
+    if not data and not chat_id:
+        return jsonify({'error': 'No chat ID provided'}), 400
+    
+    chat_id = chat_id or data.get('chat_id')
+    if not chat_id:
+        return jsonify({'error': 'No chat ID provided'}), 400
+    
+    # Unsubscribe from chat topic
+    client = get_chat_mqtt_client()
+    topic = get_chat_topic(chat_id)
+    
+    # Update presence status before unsubscribing
+    presence_payload = {
+        'type': 'presence',
+        'action': 'leave',
+        'user_id': g.user.id,
+        'username': g.user.username,
+        'timestamp': datetime.utcnow().isoformat()
+    }
+    client.publish(topic, presence_payload)
+    
+    success = client.unsubscribe(topic)
+    
+    return jsonify({'success': success})
+
+@chat_bp.route('/api/chats/<int:chat_id>/messages/send', methods=['POST'])
+@login_required
+def handle_send_message(chat_id):
+    """Send a message to a chat"""
+    # Check if user is a member of this chat
+    member = ChatMember.query.filter_by(
+        chat_id=chat_id,
+        user_id=g.user.id
+    ).first()
+    
+    if not member:
+        return jsonify({'error': 'Not a member of this chat'}), 403
+    
+    data = request.json
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
+    
+    content = data.get('content')
+    message_type = data.get('type', 'text')
+    media_url = data.get('media_url')
+    
+    if not content and not media_url:
+        return jsonify({'error': 'Message cannot be empty'}), 400
+    
+    # Create message in database
     message = ChatMessage(
         chat_id=chat_id,
         user_id=g.user.id,
         message_type=message_type,
         content=content,
-        is_deleted=False
+        media_url=media_url
     )
     db.session.add(message)
+    db.session.flush()  # Get message ID without committing
     
-    # Update chat group's updated_at
-    chat_group = ChatGroup.query.get(chat_id)
-    chat_group.updated_at = datetime.utcnow()
-    
-    # Update sender's last_read
+    # Update last read timestamp for sending user
     member.last_read = datetime.utcnow()
-    
     db.session.commit()
     
-    # Emit message to all members of the chat
-    emit('new_message', message.serialize(), room=f'chat_{chat_id}')
+    # Send message via MQTT
+    client = get_chat_mqtt_client()
+    topic = get_chat_topic(chat_id)
     
-    # Create notifications for other members
-    other_members = ChatMember.query.filter(
-        ChatMember.chat_id == chat_id,
-        ChatMember.user_id != g.user.id
-    ).all()
+    message_payload = {
+        'type': 'message',
+        'message_id': message.id,
+        'chat_id': chat_id,
+        'user': {
+            'id': g.user.id,
+            'username': g.user.username,
+            'profile_pic': g.user.profile_pic
+        },
+        'message_type': message_type,
+        'content': content,
+        'media_url': media_url,
+        'created_at': message.created_at.isoformat(),
+        'is_deleted': False
+    }
     
-    chat_name = chat_group.name
-    if not chat_group.is_group:
-        # For direct messages, use sender's username
-        chat_name = g.user.username
+    client.publish(topic, message_payload)
     
-    for member in other_members:
-        # Create notification for this member
-        notification = Notification(
-            user_id=member.user_id,
-            notification_type='message',
-            sender_id=g.user.id,
-            reference_id=chat_id,
-            content=f"{g.user.username}: {content[:50]}..." if len(content) > 50 else f"{g.user.username}: {content}"
-        )
-        db.session.add(notification)
-        
-        # Emit notification to this member
-        emit('new_notification', notification.serialize(), room=f'user_{member.user_id}')
-    
-    db.session.commit()
-    
-    return {'success': True, 'message': message.serialize()}
+    return jsonify(message.serialize())
 
-@socketio.on('delete_message')
-def handle_delete_message(data):
-    message_id = data.get('message_id')
-    
-    if not g.user:
-        return {'error': 'You must be logged in'}
-    
-    # Get the message
-    message = ChatMessage.query.get(message_id)
+@chat_bp.route('/api/chats/<int:chat_id>/messages/<int:message_id>/delete', methods=['POST'])
+@login_required
+def handle_delete_message(chat_id, message_id):
+    """Delete a message"""
+    # Check if message exists and belongs to this user
+    message = ChatMessage.query.filter_by(
+        id=message_id,
+        chat_id=chat_id
+    ).first()
     
     if not message:
-        return {'error': 'Message not found'}
+        return jsonify({'error': 'Message not found'}), 404
     
-    # Check if user is the sender or an admin of the chat
-    if message.user_id != g.user.id:
-        # Check if user is an admin
-        admin = ChatMember.query.filter_by(chat_id=message.chat_id, user_id=g.user.id, role='admin').first()
-        if not admin:
-            return {'error': 'You can only delete your own messages'}
+    # Only message author or chat admin can delete messages
+    is_author = message.user_id == g.user.id
+    is_admin = ChatMember.query.filter_by(
+        chat_id=chat_id,
+        user_id=g.user.id,
+        role='admin'
+    ).first() is not None
     
-    # Mark as deleted
+    if not (is_author or is_admin):
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    # Soft delete message
     message.is_deleted = True
-    message.content = "This message was deleted"
+    message.content = "[This message was deleted]"
     message.media_url = None
     db.session.commit()
     
-    # Emit message update to all members of the chat
-    emit('message_deleted', message.serialize(), room=f'chat_{message.chat_id}')
+    # Send delete notification via MQTT
+    client = get_chat_mqtt_client()
+    topic = get_chat_topic(chat_id)
     
-    return {'success': True}
-
-@socketio.on('read_messages')
-def handle_read_messages(data):
-    chat_id = data.get('chat_id')
-    
-    if not g.user:
-        return {'error': 'You must be logged in'}
-    
-    # Check if user is a member of this chat
-    member = ChatMember.query.filter_by(chat_id=chat_id, user_id=g.user.id).first()
-    
-    if not member:
-        return {'error': 'You are not a member of this chat'}
-    
-    # Update last_read
-    member.last_read = datetime.utcnow()
-    db.session.commit()
-    
-    # Mark all messages as read by this user
-    unread_messages = ChatMessage.query.filter(
-        ChatMessage.chat_id == chat_id,
-        ChatMessage.user_id != g.user.id,
-        ~ChatMessage.read_receipts.any(MessageReadReceipt.user_id == g.user.id)
-    ).all()
-    
-    for message in unread_messages:
-        receipt = MessageReadReceipt(message_id=message.id, user_id=g.user.id)
-        db.session.add(receipt)
-    
-    db.session.commit()
-    
-    # Notify other chat members about the read status
-    read_data = {
+    delete_payload = {
+        'type': 'delete',
+        'message_id': message_id,
         'chat_id': chat_id,
         'user_id': g.user.id,
         'username': g.user.username,
-        'read_at': datetime.utcnow().isoformat()
+        'timestamp': datetime.utcnow().isoformat()
     }
     
-    emit('messages_read', read_data, room=f'chat_{chat_id}')
+    client.publish(topic, delete_payload)
     
-    return {'success': True}
+    return jsonify({'success': True})
 
-# Register the blueprint with the app
-app.register_blueprint(chat_bp)
+@chat_bp.route('/api/chats/<int:chat_id>/messages/read', methods=['POST'])
+@login_required
+def handle_read_messages(chat_id):
+    """Mark messages as read"""
+    # Check if user is a member of this chat
+    member = ChatMember.query.filter_by(
+        chat_id=chat_id,
+        user_id=g.user.id
+    ).first()
+    
+    if not member:
+        return jsonify({'error': 'Not a member of this chat'}), 403
+    
+    data = request.json
+    if not data or not data.get('message_ids'):
+        return jsonify({'error': 'No message IDs provided'}), 400
+    
+    message_ids = data.get('message_ids')
+    
+    # Mark messages as read
+    for message_id in message_ids:
+        # Check if read receipt already exists
+        receipt = MessageReadReceipt.query.filter_by(
+            message_id=message_id,
+            user_id=g.user.id
+        ).first()
+        
+        if not receipt:
+            # Create read receipt
+            receipt = MessageReadReceipt(
+                message_id=message_id,
+                user_id=g.user.id
+            )
+            db.session.add(receipt)
+    
+    # Update last read timestamp
+    member.last_read = datetime.utcnow()
+    db.session.commit()
+    
+    # Send read notification via MQTT
+    client = get_chat_mqtt_client()
+    topic = get_chat_topic(chat_id)
+    
+    read_payload = {
+        'type': 'read',
+        'message_ids': message_ids,
+        'chat_id': chat_id,
+        'user_id': g.user.id,
+        'username': g.user.username,
+        'timestamp': datetime.utcnow().isoformat()
+    }
+    
+    client.publish(topic, read_payload)
+    
+    return jsonify({'success': True})

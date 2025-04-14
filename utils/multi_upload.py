@@ -1,450 +1,194 @@
 import os
+import json
 import time
 import logging
-import random
+import threading
 import requests
 from werkzeug.utils import secure_filename
-from datetime import datetime
-import json
-
-# Import configuration
-from config import get_config
+from typing import List, Dict, Optional, Tuple
 
 # Set up logger
 logger = logging.getLogger(__name__)
 
-# Keep track of last upload time for each service to implement rate limiting
-last_upload_time = {
-    'imgur': 0,
-    'catbox': 0,
-    'gofile': 0,
-    'pixhost': 0,
-    '0x0': 0
+# Rate limiting configuration
+MAX_REQUESTS_PER_SECOND = 1  # 1 request per second per service
+upload_timestamps = {}
+rate_limit_lock = threading.Lock()
+
+# Image hosting services configuration
+UPLOAD_SERVICES = {
+    "imgur": {
+        "enabled": True,
+        "upload_url": "https://api.imgur.com/3/image",
+        "headers": {
+            "Authorization": f"Client-ID {os.environ.get('IMGUR_CLIENT_ID', '')}"
+        },
+        "field_name": "image",
+        "response_url_path": ["data", "link"]
+    },
+    "catbox": {
+        "enabled": True,
+        "upload_url": "https://catbox.moe/user/api.php",
+        "form_data": {
+            "reqtype": "fileupload",
+            "userhash": ""  # Anonymous upload
+        },
+        "field_name": "fileToUpload",
+        "response_url_path": []  # Direct response is the URL
+    },
+    "0x0": {
+        "enabled": True,
+        "upload_url": "https://0x0.st",
+        "field_name": "file",
+        "response_url_path": []  # Direct response is the URL
+    }
 }
 
-# Load configuration values with default fallbacks
-MIN_TIME_BETWEEN_UPLOADS = 1  # 1 second between uploads
-MAX_RETRIES = 3
-RETRY_DELAY = 2  # seconds
-
-# Try to get values from config, use defaults if not available
-try:
-    config_rate_limit = get_config('upload.rate_limit_seconds', 1)
-    if isinstance(config_rate_limit, int) and config_rate_limit > 0:
-        MIN_TIME_BETWEEN_UPLOADS = config_rate_limit
-
-    config_retries = get_config('upload.max_retries', 3)
-    if isinstance(config_retries, int) and config_retries > 0:
-        MAX_RETRIES = config_retries
-
-    config_delay = get_config('upload.retry_delay_seconds', 2)
-    if isinstance(config_delay, int) and config_delay > 0:
-        RETRY_DELAY = config_delay
-except:
-    logger.warning("Using default values for rate limiting and retries")
-
-# Default services
-DEFAULT_SERVICES = ['imgur', 'catbox', 'gofile', 'pixhost', '0x0']
-
-# Get available services from config
-try:
-    config_services = get_config('upload.image_services', DEFAULT_SERVICES)
-    if isinstance(config_services, list) and len(config_services) > 0:
-        AVAILABLE_SERVICES = config_services
-    else:
-        AVAILABLE_SERVICES = DEFAULT_SERVICES
-except:
-    AVAILABLE_SERVICES = DEFAULT_SERVICES
-    logger.warning("Using default available services")
-
-# Get preferred services from config
-try:
-    config_preferred = get_config('upload.preferred_services', ['imgur', 'catbox'])
-    if isinstance(config_preferred, list) and len(config_preferred) > 0:
-        PREFERRED_SERVICES = config_preferred
-    else:
-        PREFERRED_SERVICES = ['imgur', 'catbox']
-except:
-    PREFERRED_SERVICES = ['imgur', 'catbox']
-    logger.warning("Using default preferred services")
-
-# Track service availability
-service_status = {service: True for service in AVAILABLE_SERVICES}
-
-def _rate_limit(service):
+def check_rate_limit(service_name: str) -> bool:
     """
-    Implement rate limiting for each service
-    Returns True if we should proceed with the upload, False if we should skip
+    Check if a service has been rate limited
+    
+    Args:
+        service_name: Name of the service to check
+        
+    Returns:
+        bool: True if requests can be made, False if rate limited
     """
     current_time = time.time()
-    if current_time - last_upload_time.get(service, 0) < MIN_TIME_BETWEEN_UPLOADS:
+    with rate_limit_lock:
+        if service_name not in upload_timestamps:
+            upload_timestamps[service_name] = current_time
+            return True
+        
+        elapsed = current_time - upload_timestamps[service_name]
+        if elapsed >= 1.0 / MAX_REQUESTS_PER_SECOND:
+            upload_timestamps[service_name] = current_time
+            return True
+        
+        logger.debug(f"Rate limited for service: {service_name}, need to wait {1.0 / MAX_REQUESTS_PER_SECOND - elapsed:.2f}s")
         return False
-    
-    last_upload_time[service] = current_time
-    return True
 
-def _mark_service_down(service):
-    """Mark a service as unavailable"""
-    service_status[service] = False
-    logger.warning(f"Service {service} marked as unavailable")
-
-def _mark_service_up(service):
-    """Mark a service as available"""
-    service_status[service] = True
-    logger.info(f"Service {service} is available again")
-
-def _get_available_services():
-    """Get a list of currently available services"""
-    return [service for service, status in service_status.items() if status]
-
-def upload_to_imgur(file):
-    """Upload image to Imgur"""
-    if not _rate_limit('imgur'):
-        logger.debug("Rate limiting Imgur upload")
-        return None
-    
-    # Get Imgur client ID from environment
-    client_id = os.environ.get('IMGUR_CLIENT_ID')
-    if not client_id:
-        logger.warning("IMGUR_CLIENT_ID not found in environment variables")
-        return None
-    
-    try:
-        headers = {'Authorization': f'Client-ID {client_id}'}
-        files = {'image': (file.filename, file.read(), file.content_type)}
-        file.seek(0)  # Reset file pointer for potential reuse
-        
-        for attempt in range(MAX_RETRIES):
-            try:
-                response = requests.post(
-                    'https://api.imgur.com/3/image',
-                    headers=headers,
-                    files=files
-                )
-                
-                if response.status_code == 200:
-                    data = response.json()
-                    if data.get('success'):
-                        _mark_service_up('imgur')
-                        return data['data']['link']
-                
-                if response.status_code == 429:  # Rate limited
-                    logger.warning("Imgur rate limit reached, waiting longer")
-                    time.sleep(RETRY_DELAY * 2)  # Wait longer for rate limits
-                    continue
-                    
-                logger.error(f"Imgur upload failed: {response.text}")
-                break
-                
-            except Exception as e:
-                logger.error(f"Imgur upload attempt {attempt+1} failed: {e}")
-                if attempt < MAX_RETRIES - 1:
-                    time.sleep(RETRY_DELAY)
-        
-        _mark_service_down('imgur')
-        return None
-        
-    except Exception as e:
-        logger.error(f"Imgur upload failed: {e}")
-        _mark_service_down('imgur')
-        return None
-
-def upload_to_catbox(file):
-    """Upload image to Catbox.moe"""
-    if not _rate_limit('catbox'):
-        logger.debug("Rate limiting Catbox upload")
-        return None
-    
-    try:
-        files = {
-            'reqtype': (None, 'fileupload'),
-            'fileToUpload': (file.filename, file.read(), file.content_type)
-        }
-        file.seek(0)  # Reset file pointer for potential reuse
-        
-        for attempt in range(MAX_RETRIES):
-            try:
-                response = requests.post(
-                    'https://catbox.moe/user/api.php',
-                    files=files
-                )
-                
-                if response.status_code == 200 and response.text.startswith('https://'):
-                    _mark_service_up('catbox')
-                    return response.text
-                
-                logger.error(f"Catbox upload failed: {response.text}")
-                break
-                
-            except Exception as e:
-                logger.error(f"Catbox upload attempt {attempt+1} failed: {e}")
-                if attempt < MAX_RETRIES - 1:
-                    time.sleep(RETRY_DELAY)
-        
-        _mark_service_down('catbox')
-        return None
-        
-    except Exception as e:
-        logger.error(f"Catbox upload failed: {e}")
-        _mark_service_down('catbox')
-        return None
-
-def upload_to_gofile(file):
-    """Upload image to GoFile.io"""
-    if not _rate_limit('gofile'):
-        logger.debug("Rate limiting GoFile upload")
-        return None
-    
-    try:
-        # Set default server in case the API fails
-        server = "store"
-        
-        # First get the best server
-        for attempt in range(MAX_RETRIES):
-            try:
-                server_response = requests.get('https://api.gofile.io/getServer')
-                if server_response.status_code == 200:
-                    data = server_response.json()
-                    if data.get('status') == 'ok':
-                        server = data['data']['server']
-                        logger.info(f"Using GoFile server: {server}")
-                        break
-                logger.error(f"GoFile get server failed: {server_response.text}")
-                time.sleep(RETRY_DELAY)
-            except Exception as e:
-                logger.error(f"GoFile get server attempt {attempt+1} failed: {e}")
-                if attempt < MAX_RETRIES - 1:
-                    time.sleep(RETRY_DELAY)
-                else:
-                    logger.warning("Using default GoFile server: store")
-        
-        # Now upload to the server
-        files = {'file': (file.filename, file.read(), file.content_type)}
-        file.seek(0)  # Reset file pointer for potential reuse
-        
-        for attempt in range(MAX_RETRIES):
-            try:
-                response = requests.post(
-                    f'https://{server}.gofile.io/uploadFile',
-                    files=files
-                )
-                
-                if response.status_code == 200:
-                    data = response.json()
-                    if data.get('status') == 'ok':
-                        _mark_service_up('gofile')
-                        return data['data']['downloadPage']
-                
-                logger.error(f"GoFile upload failed: {response.text}")
-                break
-                
-            except Exception as e:
-                logger.error(f"GoFile upload attempt {attempt+1} failed: {e}")
-                if attempt < MAX_RETRIES - 1:
-                    time.sleep(RETRY_DELAY)
-        
-        _mark_service_down('gofile')
-        return None
-        
-    except Exception as e:
-        logger.error(f"GoFile upload failed: {e}")
-        _mark_service_down('gofile')
-        return None
-
-def upload_to_pixhost(file):
-    """Upload image to Pixhost.to"""
-    if not _rate_limit('pixhost'):
-        logger.debug("Rate limiting Pixhost upload")
-        return None
-    
-    try:
-        files = {
-            'img': (file.filename, file.read(), file.content_type)
-        }
-        data = {
-            'content_type': 0,  # 0 for family friendly content
-            'max_th_size': 300  # Max thumbnail size
-        }
-        file.seek(0)  # Reset file pointer for potential reuse
-        
-        for attempt in range(MAX_RETRIES):
-            try:
-                response = requests.post(
-                    'https://api.pixhost.to/images',
-                    files=files,
-                    data=data
-                )
-                
-                if response.status_code == 200:
-                    data = response.json()
-                    _mark_service_up('pixhost')
-                    return data.get('show_url')
-                
-                logger.error(f"Pixhost upload failed: {response.text}")
-                break
-                
-            except Exception as e:
-                logger.error(f"Pixhost upload attempt {attempt+1} failed: {e}")
-                if attempt < MAX_RETRIES - 1:
-                    time.sleep(RETRY_DELAY)
-        
-        _mark_service_down('pixhost')
-        return None
-        
-    except Exception as e:
-        logger.error(f"Pixhost upload failed: {e}")
-        _mark_service_down('pixhost')
-        return None
-
-def upload_to_0x0(file):
-    """Upload image to 0x0.st"""
-    if not _rate_limit('0x0'):
-        logger.debug("Rate limiting 0x0.st upload")
-        return None
-    
-    try:
-        files = {'file': (file.filename, file.read(), file.content_type)}
-        file.seek(0)  # Reset file pointer for potential reuse
-        
-        for attempt in range(MAX_RETRIES):
-            try:
-                response = requests.post(
-                    'https://0x0.st',
-                    files=files
-                )
-                
-                if response.status_code == 200 and response.text.startswith('https://'):
-                    _mark_service_up('0x0')
-                    return response.text.strip()
-                
-                logger.error(f"0x0.st upload failed: {response.text}")
-                break
-                
-            except Exception as e:
-                logger.error(f"0x0.st upload attempt {attempt+1} failed: {e}")
-                if attempt < MAX_RETRIES - 1:
-                    time.sleep(RETRY_DELAY)
-        
-        _mark_service_down('0x0')
-        return None
-        
-    except Exception as e:
-        logger.error(f"0x0.st upload failed: {e}")
-        _mark_service_down('0x0')
-        return None
-
-def upload_to_multiple_services(file):
+def wait_for_rate_limit(service_name: str) -> None:
     """
-    Upload an image to multiple services for redundancy
-    Returns a list of successful upload URLs
+    Wait until a service is no longer rate limited
+    
+    Args:
+        service_name: Name of the service to wait for
     """
-    # Use a copy because it might change during execution
-    available_services = _get_available_services()
+    while not check_rate_limit(service_name):
+        time.sleep(0.1)
+
+def upload_to_service(file, service_name: str, service_config: Dict) -> Optional[str]:
+    """
+    Upload a file to a specific service with rate limiting
     
-    if not available_services:
-        logger.error("No image hosting services are available")
-        return []
+    Args:
+        file: File object to upload
+        service_name: Name of the service
+        service_config: Service configuration
+        
+    Returns:
+        Optional[str]: URL of the uploaded file if successful, None otherwise
+    """
+    # Check if service is enabled
+    if not service_config.get("enabled", False):
+        logger.debug(f"Service {service_name} is disabled, skipping")
+        return None
     
-    # Randomize the order to distribute load
-    random.shuffle(available_services)
+    # Wait for rate limit
+    wait_for_rate_limit(service_name)
     
-    # Store successful upload URLs
-    upload_urls = []
-    
-    # Try to upload to each service
-    for service in available_services:
-        if service == 'imgur':
-            url = upload_to_imgur(file)
-        elif service == 'catbox':
-            url = upload_to_catbox(file)
-        elif service == 'gofile':
-            url = upload_to_gofile(file)
-        elif service == 'pixhost':
-            url = upload_to_pixhost(file)
-        elif service == '0x0':
-            url = upload_to_0x0(file)
+    try:
+        # Reset file pointer
+        file.seek(0)
+        
+        # Prepare upload
+        upload_url = service_config["upload_url"]
+        field_name = service_config["field_name"]
+        
+        # Prepare request arguments
+        kwargs = {
+            "files": {
+                field_name: (
+                    secure_filename(file.filename), 
+                    file, 
+                    file.content_type if hasattr(file, 'content_type') else None
+                )
+            },
+            "timeout": 30
+        }
+        
+        # Add headers if specified
+        if "headers" in service_config:
+            kwargs["headers"] = service_config["headers"]
+        
+        # Add form data if specified
+        if "form_data" in service_config:
+            kwargs["data"] = service_config["form_data"]
+        
+        # Make request
+        logger.info(f"Uploading to {service_name}...")
+        response = requests.post(upload_url, **kwargs)
+        
+        # Check response
+        if response.status_code not in (200, 201):
+            logger.warning(f"Upload to {service_name} failed with status code {response.status_code}: {response.text}")
+            return None
+        
+        # Extract URL from response
+        if service_name in ("0x0", "catbox"):
+            # These services return the URL directly as text
+            url = response.text.strip()
         else:
-            url = None
+            # Other services return JSON
+            response_data = response.json()
+            url = response_data
+            for key in service_config["response_url_path"]:
+                url = url[key]
         
-        if url:
-            upload_urls.append(url)
-            
-            # If we have at least 2 successful uploads, we can stop
-            if len(upload_urls) >= 2:
-                break
+        logger.info(f"Successfully uploaded to {service_name}: {url}")
+        return url
     
-    return upload_urls
+    except Exception as e:
+        logger.error(f"Error uploading to {service_name}: {str(e)}")
+        return None
 
-def save_multi_uploads(file):
+def save_multi_uploads(file) -> List[str]:
     """
-    Save an uploaded file to multiple services and return the URLs
-    Also tracks the URLs in a local JSON file for reference
+    Save a file to multiple hosting services for redundancy
+    
+    Args:
+        file: File object to upload
+        
+    Returns:
+        List[str]: List of URLs where the file was uploaded
     """
-    # Check if file is valid
-    if not file or not file.filename:
-        return []
+    urls = []
     
-    # Get the file extension
-    _, ext = os.path.splitext(file.filename)
-    ext = ext.lower()
-    
-    # Make sure it's an allowed file type
-    allowed_extensions = {'.jpg', '.jpeg', '.png', '.gif'}
-    if ext not in allowed_extensions:
-        logger.warning(f"Invalid file extension: {ext}")
-        return []
-    
-    # Upload to multiple services
-    urls = upload_to_multiple_services(file)
-    
-    # Track the uploads in a local file for reference
-    if urls:
-        try:
-            uploads_file = 'instance/uploads.json'
-            uploads = {}
-            
-            # Create directory if it doesn't exist
-            os.makedirs(os.path.dirname(uploads_file), exist_ok=True)
-            
-            # Load existing data if the file exists
-            if os.path.exists(uploads_file):
-                with open(uploads_file, 'r') as f:
-                    uploads = json.load(f)
-            
-            # Add new upload
-            timestamp = datetime.now().isoformat()
-            filename = secure_filename(file.filename)
-            if 'files' not in uploads:
-                uploads['files'] = []
-            
-            uploads['files'].append({
-                'original_filename': filename,
-                'timestamp': timestamp,
-                'urls': urls
-            })
-            
-            # Save the updated data
-            with open(uploads_file, 'w') as f:
-                json.dump(uploads, f, indent=2)
-                
-        except Exception as e:
-            logger.error(f"Error tracking upload: {e}")
+    # Try each service in sequence
+    for service_name, service_config in UPLOAD_SERVICES.items():
+        url = upload_to_service(file, service_name, service_config)
+        if url:
+            urls.append(url)
     
     return urls
 
-def get_first_working_url(urls):
+def get_first_working_url(urls: List[str]) -> Optional[str]:
     """
-    Check which URLs are still working and return the first one that works
-    """
-    if not urls:
-        return None
+    Check a list of URLs and return the first one that is accessible
     
+    Args:
+        urls: List of URLs to check
+        
+    Returns:
+        Optional[str]: The first working URL, or None if none work
+    """
     for url in urls:
         try:
             response = requests.head(url, timeout=5)
-            if response.status_code < 400:  # Any successful status code
+            if response.status_code < 400:
                 return url
-        except:
+        except Exception:
             continue
     
-    return None
+    return None if not urls else urls[0]  # Fall back to first URL if all checks fail

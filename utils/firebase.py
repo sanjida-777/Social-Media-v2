@@ -1,133 +1,148 @@
 import os
 import json
 import logging
-import requests
 from functools import wraps
-from firebase_admin import auth, initialize_app, credentials
-import firebase_admin
+from flask import request, g, redirect, url_for, session
 
 # Set up logger
 logger = logging.getLogger(__name__)
 
-# Initialize Firebase Admin SDK with credentials from environment variable
+# Firebase Admin SDK
+import firebase_admin
+from firebase_admin import credentials, auth
+
+# Global variables
+firebase_app = None
+firebase_config = None
+
 def initialize_firebase():
+    """
+    Initialize Firebase Admin SDK with service account credentials
+    """
+    global firebase_app, firebase_config
+    
     try:
-        firebase_credentials_json = os.environ.get('FIREBASE_CREDENTIALS')
+        # First, try to load credentials from existing firebase_cred.json
+        cred_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'firebase_cred.json')
         
-        if not firebase_credentials_json:
-            logger.warning("Firebase credentials not found in environment variables, using dummy credentials for development")
-            # Use dummy credentials for development
-            cred = credentials.Certificate({
-                "type": "service_account",
-                "project_id": "fblike-app",
-                "private_key_id": "dummy",
-                "private_key": "-----BEGIN PRIVATE KEY-----\nDUMMY\n-----END PRIVATE KEY-----\n",
-                "client_email": "dummy@fblike-app.iam.gserviceaccount.com",
-                "client_id": "12345",
-                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                "token_uri": "https://oauth2.googleapis.com/token",
-                "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-                "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/dummy%40fblike-app.iam.gserviceaccount.com"
-            })
+        if os.path.exists(cred_path):
+            logger.info(f"Loading Firebase credentials from {cred_path}")
+            cred = credentials.Certificate(cred_path)
+            
+            # Also load the configuration for client-side use
+            with open(cred_path, 'r') as f:
+                firebase_cred_data = json.load(f)
+                
+                # Construct client config from service account
+                # This is just a basic configuration; in production, you might want more fields
+                firebase_config = {
+                    "apiKey": os.environ.get("FIREBASE_API_KEY", ""),
+                    "authDomain": f"{firebase_cred_data.get('project_id', '')}.firebaseapp.com",
+                    "projectId": firebase_cred_data.get("project_id", ""),
+                    "storageBucket": f"{firebase_cred_data.get('project_id', '')}.appspot.com",
+                    "messagingSenderId": firebase_cred_data.get("project_id", ""),
+                    "appId": os.environ.get("FIREBASE_APP_ID", "")
+                }
         else:
-            # Parse credentials from environment variable
-            cred_dict = json.loads(firebase_credentials_json)
-            cred = credentials.Certificate(cred_dict)
+            # If no file, check for environment variables
+            logger.warning("Firebase credentials file not found, checking environment variables")
+            if os.environ.get("FIREBASE_CREDENTIALS"):
+                cred_json = json.loads(os.environ.get("FIREBASE_CREDENTIALS"))
+                cred = credentials.Certificate(cred_json)
+                
+                # Also load the configuration for client-side
+                firebase_config = {
+                    "apiKey": os.environ.get("FIREBASE_API_KEY", ""),
+                    "authDomain": f"{cred_json.get('project_id', '')}.firebaseapp.com",
+                    "projectId": cred_json.get("project_id", ""),
+                    "storageBucket": f"{cred_json.get('project_id', '')}.appspot.com",
+                    "messagingSenderId": cred_json.get("project_id", ""),
+                    "appId": os.environ.get("FIREBASE_APP_ID", "")
+                }
+            else:
+                # If no credentials available, use dummy for development
+                logger.warning("Firebase credentials not found in file or environment variables")
+                return None
         
-        # Initialize Firebase Admin with credentials
-        initialize_app(cred)
+        # Initialize the app if we have valid credentials
+        firebase_app = firebase_admin.initialize_app(cred)
         logger.info("Firebase Admin SDK initialized successfully")
+        return firebase_app
+        
     except Exception as e:
-        logger.error(f"Error initializing Firebase Admin SDK: {e}")
-        raise
-
-# Initialize Firebase Admin SDK
-firebase_initialized = False
-try:
-    initialize_firebase()
-    firebase_initialized = True
-except Exception as e:
-    logger.error(f"Firebase initialization failed: {e}")
-    # Let the application continue without Firebase
-
-def verify_firebase_token(token):
-    """
-    Verify Firebase ID token and return user info if valid
-    """
-    if not firebase_initialized:
-        logger.warning("Firebase not initialized, cannot verify token")
-        return None
-        
-    try:
-        # Verify the token
-        decoded_token = auth.verify_id_token(token)
-        
-        # Get user info
-        uid = decoded_token.get('uid')
-        user = auth.get_user(uid)
-        
-        # Return user data
-        return {
-            'uid': user.uid,
-            'email': user.email,
-            'name': user.display_name,
-            'picture': user.photo_url,
-            'email_verified': user.email_verified
-        }
-    except Exception as e:
-        logger.error(f"Error verifying Firebase token: {e}")
+        logger.error(f"Error initializing Firebase Admin SDK: {str(e)}")
         return None
 
-def create_firebase_user(email, password, display_name=None):
+# Initialize Firebase when this module is imported
+firebase_app = initialize_firebase()
+
+def get_firebase_config_for_client():
     """
-    Create a new user in Firebase Authentication
+    Get Firebase configuration for client-side use
     """
-    if not firebase_initialized:
-        logger.warning("Firebase not initialized, cannot create user")
-        # Return a mock user for development
-        return {'uid': 'dev_' + email.replace('@', '_').replace('.', '_')}
-        
+    return firebase_config
+
+def verify_firebase_token(id_token):
+    """
+    Verify Firebase ID token and return the decoded token
+    Returns None if token is invalid
+    """
+    if not firebase_app:
+        logger.warning("Cannot verify token: Firebase Admin SDK not initialized")
+        return None
+    
     try:
-        user = auth.create_user(
-            email=email,
-            password=password,
-            display_name=display_name,
-            email_verified=False
-        )
-        return user
+        # Verify the ID token
+        decoded_token = auth.verify_id_token(id_token)
+        logger.info(f"Successfully verified token for user: {decoded_token.get('uid')}")
+        return decoded_token
     except Exception as e:
-        logger.error(f"Error creating Firebase user: {e}")
-        # Return None instead of raising to avoid breaking the app
+        logger.error(f"Error verifying Firebase token: {str(e)}")
         return None
 
-def delete_firebase_user(uid):
+def firebase_login_required(f):
     """
-    Delete a user from Firebase Authentication
+    Decorator to require Firebase authentication for certain views
     """
-    if not firebase_initialized:
-        logger.warning("Firebase not initialized, cannot delete user")
-        return True
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        # Check if user is logged in through session
+        if g.user:
+            return f(*args, **kwargs)
         
-    try:
-        auth.delete_user(uid)
-        return True
-    except Exception as e:
-        logger.error(f"Error deleting Firebase user: {e}")
-        # Return False instead of raising to avoid breaking the app
-        return False
-
-def update_firebase_user(uid, **kwargs):
-    """
-    Update user properties in Firebase Authentication
-    """
-    if not firebase_initialized:
-        logger.warning("Firebase not initialized, cannot update user")
-        return True
+        # Check for Firebase ID token in request
+        id_token = None
+        auth_header = request.headers.get('Authorization')
         
-    try:
-        auth.update_user(uid, **kwargs)
-        return True
-    except Exception as e:
-        logger.error(f"Error updating Firebase user: {e}")
-        # Return False instead of raising to avoid breaking the app
-        return False
+        if auth_header:
+            # Extract token from 'Bearer <token>' format
+            parts = auth_header.split()
+            if len(parts) == 2 and parts[0].lower() == 'bearer':
+                id_token = parts[1]
+        
+        if not id_token:
+            # Token not found, redirect to login
+            return redirect(url_for('auth.login'))
+        
+        # Verify token
+        decoded_token = verify_firebase_token(id_token)
+        if not decoded_token:
+            # Invalid token, redirect to login
+            return redirect(url_for('auth.login'))
+        
+        # Token is valid, check if user exists in database
+        from models import User
+        
+        user = User.query.filter_by(firebase_uid=decoded_token['uid']).first()
+        if not user:
+            # User not found in database, redirect to register
+            session['firebase_token'] = id_token  # Save token for registration
+            return redirect(url_for('auth.register'))
+        
+        # Set user in session
+        session['user_id'] = user.id
+        g.user = user
+        
+        return f(*args, **kwargs)
+    
+    return decorated_function

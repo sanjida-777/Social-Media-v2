@@ -171,6 +171,20 @@ def after_request(response):
         logger.debug(f"Request completed in {duration.total_seconds():.3f}s")
     return response
 
+# Import Firebase utilities
+from utils.firebase import get_firebase_config_for_client
+
+# Create template context processor to inject Firebase config
+@app.context_processor
+def inject_firebase_config():
+    """
+    Add Firebase configuration to all templates
+    This is more secure than hardcoding values in JavaScript files
+    """
+    return {
+        'firebase_config': get_firebase_config_for_client()
+    }
+
 # Create all tables in a with app context
 with app.app_context():
     # Import models to ensure tables are created

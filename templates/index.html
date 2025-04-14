@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+
+{% block title %}Home - SocialConnect{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Left Sidebar -->
+    <div class="col-lg-3 d-none d-lg-block">
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Profile</h5>
+            </div>
+            <div class="card-body text-center">
+                <img src="{{ g.user.profile_pic|default(url_for('static', filename='images/default-avatar.svg')) }}" 
+                     alt="{{ g.user.username }}" class="avatar img-fluid mb-3" style="width: 80px; height: 80px;">
+                <h5>{{ g.user.username }}</h5>
+                <p class="text-muted small">{{ g.user.bio|default('No bio yet') }}</p>
+                <div class="d-grid">
+                    <a href="{{ url_for('auth.profile', username=g.user.username) }}" class="btn btn-sm btn-outline-primary">View Profile</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Menu</h5>
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="{{ url_for('main.index') }}" class="list-group-item list-group-item-action active">
+                    <i class="bi bi-house-fill me-2"></i> Home
+                </a>
+                <a href="{{ url_for('auth.friends') }}" class="list-group-item list-group-item-action">
+                    <i class="bi bi-people-fill me-2"></i> Friends
+                </a>
+                <a href="{{ url_for('auth.messages') }}" class="list-group-item list-group-item-action">
+                    <i class="bi bi-chat-fill me-2"></i> Messages
+                </a>
+                <a href="#" class="list-group-item list-group-item-action">
+                    <i class="bi bi-bookmark-fill me-2"></i> Saved Posts
+                </a>
+                <a href="#" class="list-group-item list-group-item-action">
+                    <i class="bi bi-calendar-event me-2"></i> Events
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Center Feed -->
+    <div class="col-md-8 col-lg-6">
+        <div class="card mb-3">
+            <div class="card-body">
+                <form id="new-post-form">
+                    <div class="mb-3">
+                        <textarea class="form-control" id="post-content" rows="3" placeholder="What's on your mind?"></textarea>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <button type="button" class="btn btn-sm btn-outline-light me-2">
+                                <i class="bi bi-image"></i> Photo
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-light">
+                                <i class="bi bi-camera-video"></i> Video
+                            </button>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Post</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="feed-container">
+            <h5 class="mb-3">Your Feed</h5>
+            
+            <div class="feed-placeholder text-center py-5">
+                <h4>Welcome to SocialConnect!</h4>
+                <p class="text-muted">Your feed will show posts from friends and people you follow.</p>
+                <p>Start by adding friends or following interesting profiles.</p>
+                <a href="{{ url_for('auth.friends') }}" class="btn btn-outline-primary mt-2">Find Friends</a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Right Sidebar -->
+    <div class="col-md-4 col-lg-3 d-none d-md-block">
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Trending</h5>
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="#" class="list-group-item list-group-item-action">
+                    <h6 class="mb-1">#WorldNews</h6>
+                    <p class="small text-muted mb-0">1.2K posts</p>
+                </a>
+                <a href="#" class="list-group-item list-group-item-action">
+                    <h6 class="mb-1">#Technology</h6>
+                    <p class="small text-muted mb-0">856 posts</p>
+                </a>
+                <a href="#" class="list-group-item list-group-item-action">
+                    <h6 class="mb-1">#Science</h6>
+                    <p class="small text-muted mb-0">721 posts</p>
+                </a>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Friend Suggestions</h5>
+                <a href="#" class="btn btn-sm btn-link">See All</a>
+            </div>
+            <div class="list-group list-group-flush">
+                <div class="list-group-item">
+                    <div class="d-flex align-items-center">
+                        <img src="{{ url_for('static', filename='images/default-avatar.svg') }}" alt="User" class="avatar-mini me-2">
+                        <div>
+                            <h6 class="mb-0">Jane Doe</h6>
+                            <p class="small text-muted mb-0">3 mutual friends</p>
+                        </div>
+                        <button class="btn btn-sm btn-primary ms-auto">Follow</button>
+                    </div>
+                </div>
+                <div class="list-group-item">
+                    <div class="d-flex align-items-center">
+                        <img src="{{ url_for('static', filename='images/default-avatar.svg') }}" alt="User" class="avatar-mini me-2">
+                        <div>
+                            <h6 class="mb-0">John Smith</h6>
+                            <p class="small text-muted mb-0">1 mutual friend</p>
+                        </div>
+                        <button class="btn btn-sm btn-primary ms-auto">Follow</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block additional_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const newPostForm = document.getElementById('new-post-form');
+    if (newPostForm) {
+        newPostForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            const content = document.getElementById('post-content').value;
+            
+            if (content.trim()) {
+                // Display loading state
+                const submitBtn = this.querySelector('button[type="submit"]');
+                const originalText = submitBtn.innerHTML;
+                submitBtn.innerHTML = 'Posting...';
+                submitBtn.disabled = true;
+                
+                // Submit post
+                fetch('/api/posts', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ content: content }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Clear form and reload feed
+                        document.getElementById('post-content').value = '';
+                        loadFeed();
+                    } else {
+                        alert('Error creating post: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while creating your post.');
+                })
+                .finally(() => {
+                    // Restore button
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
+                });
+            }
+        });
+    }
+    
+    // Placeholder function to load feed
+    function loadFeed() {
+        const feedContainer = document.querySelector('.feed-container');
+        if (feedContainer) {
+            // In a real implementation, this would fetch posts from the server
+            console.log('Loading feed...');
+        }
+    }
+});
+</script>
+{% endblock %}

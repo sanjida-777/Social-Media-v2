@@ -1,59 +1,211 @@
 {% extends "base.html" %}
 
-{% block title %}Register | Social App{% endblock %}
+{% block title %}Register - SocialConnect{% endblock %}
+
+{% block additional_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+{% endblock %}
 
 {% block content %}
-<div class="container">
-    <div class="row justify-content-center">
-        <div class="col-md-6 col-lg-5">
-            <div class="card shadow-sm mt-5">
-                <div class="card-body p-4">
-                    <h2 class="text-center mb-4"><i class="bi bi-globe me-2"></i>SocialApp</h2>
-                    
-                    <div id="alert-container"></div>
-                    
-                    <!-- Register Form -->
-                    <form id="register-form" action="{{ url_for('auth.register') }}" method="post" style="display: none;">
-                        <div class="mb-3">
-                            <label for="username" class="form-label">Username</label>
-                            <input type="text" class="form-control" id="username" name="username" required>
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card auth-card">
+            <div class="card-header bg-transparent text-center">
+                <h3 class="mb-0">Create Your Account</h3>
+            </div>
+            <div class="card-body">
+                <!-- Auth message for feedback -->
+                <div id="auth-message" class="alert" style="display: none;"></div>
+                
+                <!-- Register form -->
+                <form id="register-form" class="needs-validation" novalidate>
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Username</label>
+                        <input type="text" class="form-control" id="username" name="username" required>
+                        <div class="invalid-feedback">
+                            Please choose a username.
                         </div>
-                        <div class="mb-3">
-                            <label for="email" class="form-label">Email address</label>
-                            <input type="email" class="form-control" id="email" name="email" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="password" class="form-label">Password</label>
-                            <input type="password" class="form-control" id="password" name="password" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="confirm-password" class="form-label">Confirm Password</label>
-                            <input type="password" class="form-control" id="confirm-password" name="confirm_password" required>
-                        </div>
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-primary">Register</button>
-                        </div>
-                    </form>
-                    
-                    <!-- Firebase UI Auth Container -->
-                    <div id="firebaseui-auth-container"></div>
-                    
-                    <div class="text-center mt-3">
-                        <p>Already have an account? <a href="{{ url_for('auth.login') }}">Log in</a></p>
                     </div>
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email address</label>
+                        <input type="email" class="form-control" id="email" name="email" required>
+                        <div class="invalid-feedback">
+                            Please enter a valid email address.
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                        <div class="invalid-feedback">
+                            Please enter a password.
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="confirm-password" class="form-label">Confirm Password</label>
+                        <input type="password" class="form-control" id="confirm-password" name="confirm-password" required>
+                        <div class="invalid-feedback">
+                            Passwords must match.
+                        </div>
+                    </div>
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="terms" name="terms" required>
+                        <label class="form-check-label" for="terms">I agree to the <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a></label>
+                        <div class="invalid-feedback">
+                            You must agree to the terms to continue.
+                        </div>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">Register</button>
+                    </div>
+                </form>
+                
+                <hr class="my-4">
+                
+                <!-- OAuth buttons -->
+                <div class="text-center mb-3">
+                    <p class="text-muted">Or register with:</p>
+                </div>
+                
+                <!-- Firebase UI Auth Container -->
+                <div id="firebaseui-auth-container"></div>
+                
+                <!-- Sign in with Google directly -->
+                <div class="d-grid gap-2 mt-3">
+                    <button id="google-signin" class="btn btn-outline-light">
+                        <img src="{{ url_for('static', filename='images/google-logo.svg') }}" alt="Google" width="20" height="20" class="me-2">
+                        Register with Google
+                    </button>
+                </div>
+                
+                <!-- Account links -->
+                <div class="text-center mt-4">
+                    <p class="mb-0">Already have an account? <a href="{{ url_for('auth.login') }}">Log In</a></p>
                 </div>
             </div>
         </div>
     </div>
 </div>
-
 {% endblock %}
 
-{% block extra_scripts %}
+{% block additional_js %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Initialize Firebase UI for registration
-        setupFirebaseAuthUI();
+        // Form validation
+        const form = document.getElementById('register-form');
+        const authMessage = document.getElementById('auth-message');
+        const password = document.getElementById('password');
+        const confirmPassword = document.getElementById('confirm-password');
+        
+        if (form) {
+            // Check if passwords match
+            confirmPassword.addEventListener('input', function() {
+                if (password.value !== confirmPassword.value) {
+                    confirmPassword.setCustomValidity('Passwords do not match');
+                } else {
+                    confirmPassword.setCustomValidity('');
+                }
+            });
+            
+            // Form submission
+            form.addEventListener('submit', function(event) {
+                event.preventDefault();
+                
+                if (!form.checkValidity()) {
+                    event.stopPropagation();
+                    form.classList.add('was-validated');
+                    return;
+                }
+                
+                // Get form data
+                const username = document.getElementById('username').value;
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+                
+                // Show loading state
+                const submitButton = form.querySelector('button[type="submit"]');
+                const originalButtonText = submitButton.textContent;
+                submitButton.textContent = 'Registering...';
+                submitButton.disabled = true;
+                
+                // Send registration request
+                fetch('/auth/api/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        email: email,
+                        password: password
+                    }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Show success message
+                        authMessage.textContent = 'Registration successful! Redirecting to login...';
+                        authMessage.className = 'alert alert-success';
+                        authMessage.style.display = 'block';
+                        
+                        // Redirect to login after a delay
+                        setTimeout(function() {
+                            window.location.href = '/auth/login';
+                        }, 2000);
+                    } else {
+                        // Show error message
+                        authMessage.textContent = data.message || 'Registration failed. Please try again.';
+                        authMessage.className = 'alert alert-danger';
+                        authMessage.style.display = 'block';
+                        
+                        // Reset button
+                        submitButton.textContent = originalButtonText;
+                        submitButton.disabled = false;
+                    }
+                })
+                .catch(error => {
+                    // Show error message
+                    authMessage.textContent = 'An error occurred. Please try again later.';
+                    authMessage.className = 'alert alert-danger';
+                    authMessage.style.display = 'block';
+                    
+                    // Reset button
+                    submitButton.textContent = originalButtonText;
+                    submitButton.disabled = false;
+                    
+                    console.error('Error:', error);
+                });
+            });
+        }
+        
+        // Set up Google sign-in button
+        const googleSigninBtn = document.getElementById('google-signin');
+        if (googleSigninBtn) {
+            googleSigninBtn.addEventListener('click', function() {
+                if (isFirebaseInitialized()) {
+                    const provider = new firebase.auth.GoogleAuthProvider();
+                    firebase.auth().signInWithPopup(provider)
+                        .then((result) => {
+                            // Success, redirect will be handled by auth state change
+                        })
+                        .catch((error) => {
+                            // Handle errors
+                            const errorMessage = error.message;
+                            if (authMessage) {
+                                authMessage.textContent = errorMessage;
+                                authMessage.className = 'alert alert-danger';
+                                authMessage.style.display = 'block';
+                            }
+                        });
+                } else {
+                    // Firebase not initialized, show error
+                    if (authMessage) {
+                        authMessage.textContent = 'Firebase authentication is not available, please use local registration.';
+                        authMessage.className = 'alert alert-warning';
+                        authMessage.style.display = 'block';
+                    }
+                }
+            });
+        }
     });
 </script>
 {% endblock %}

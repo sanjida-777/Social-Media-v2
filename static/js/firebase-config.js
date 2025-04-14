@@ -1,14 +1,8 @@
 // Firebase configuration
-// Replace with your own Firebase project configuration
-const firebaseConfig = {
-  apiKey: "",
-  authDomain: "",
-  projectId: "",
-  storageBucket: "",
-  messagingSenderId: "",
-  appId: "",
-  measurementId: ""
-};
+// This will be populated from the server via the template system
+// This is the correct approach - credentials should never be hardcoded in client-side JS
+// The public Firebase config is injected by the server during template rendering
+let firebaseConfig = window.firebaseConfig || {};
 
 // Initialize Firebase once credentials are provided
 let firebaseInitialized = false;

@@ -1,51 +1,106 @@
 {% extends "base.html" %}
 
-{% block title %}Login | Social App{% endblock %}
+{% block title %}Login - SocialConnect{% endblock %}
+
+{% block additional_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+{% endblock %}
 
 {% block content %}
-<div class="container">
-    <div class="row justify-content-center">
-        <div class="col-md-6 col-lg-5">
-            <div class="card shadow-sm mt-5">
-                <div class="card-body p-4">
-                    <h2 class="text-center mb-4"><i class="bi bi-globe me-2"></i>SocialApp</h2>
-                    
-                    <div id="alert-container"></div>
-                    
-                    <!-- Login Form -->
-                    <form id="login-form" action="{{ url_for('auth.login') }}" method="post" style="display: none;">
-                        <div class="mb-3">
-                            <label for="email" class="form-label">Email address</label>
-                            <input type="email" class="form-control" id="email" name="email" required>
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card auth-card">
+            <div class="card-header bg-transparent text-center">
+                <h3 class="mb-0">Welcome Back!</h3>
+            </div>
+            <div class="card-body">
+                <!-- Auth message for feedback -->
+                <div id="auth-message" class="alert" style="display: none;"></div>
+                
+                <!-- Login form -->
+                <form id="login-form" class="needs-validation" novalidate>
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email address</label>
+                        <input type="email" class="form-control" id="email" name="email" required>
+                        <div class="invalid-feedback">
+                            Please enter a valid email address.
                         </div>
-                        <div class="mb-3">
-                            <label for="password" class="form-label">Password</label>
-                            <input type="password" class="form-control" id="password" name="password" required>
-                        </div>
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-primary">Log In</button>
-                        </div>
-                    </form>
-                    
-                    <!-- Firebase UI Auth Container -->
-                    <div id="firebaseui-auth-container"></div>
-                    
-                    <div class="text-center mt-3">
-                        <p>Don't have an account? <a href="{{ url_for('auth.register') }}">Sign up</a></p>
                     </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                        <div class="invalid-feedback">
+                            Please enter your password.
+                        </div>
+                    </div>
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="remember" name="remember">
+                        <label class="form-check-label" for="remember">Remember me</label>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">Login</button>
+                    </div>
+                </form>
+                
+                <hr class="my-4">
+                
+                <!-- Firebase UI Auth Container -->
+                <div id="firebaseui-auth-container"></div>
+                
+                <!-- Sign in with Google directly -->
+                <div class="d-grid gap-2 mt-3">
+                    <button id="google-signin" class="btn btn-outline-light">
+                        <img src="{{ url_for('static', filename='images/google-logo.svg') }}" alt="Google" width="20" height="20" class="me-2">
+                        Sign in with Google
+                    </button>
+                </div>
+                
+                <!-- Account links -->
+                <div class="text-center mt-4">
+                    <p class="mb-0">Don't have an account? <a href="{{ url_for('auth.register') }}">Register</a></p>
+                    <p class="mt-2"><a href="{{ url_for('auth.forgot_password') }}">Forgot your password?</a></p>
                 </div>
             </div>
         </div>
     </div>
 </div>
-
 {% endblock %}
 
-{% block extra_scripts %}
+{% block additional_js %}
+<!-- Google Sign In -->
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Initialize Firebase UI for login
-        setupFirebaseAuthUI();
+        // Set up Google sign-in button if Firebase is initialized
+        const googleSigninBtn = document.getElementById('google-signin');
+        if (googleSigninBtn) {
+            googleSigninBtn.addEventListener('click', function() {
+                if (isFirebaseInitialized()) {
+                    const provider = new firebase.auth.GoogleAuthProvider();
+                    firebase.auth().signInWithPopup(provider)
+                        .then((result) => {
+                            // Success, redirect will be handled by auth state change
+                        })
+                        .catch((error) => {
+                            // Handle errors
+                            const errorMessage = error.message;
+                            const errorDiv = document.getElementById('auth-message');
+                            if (errorDiv) {
+                                errorDiv.textContent = errorMessage;
+                                errorDiv.className = 'alert alert-danger';
+                                errorDiv.style.display = 'block';
+                            }
+                        });
+                } else {
+                    // Firebase not initialized, show error
+                    const errorDiv = document.getElementById('auth-message');
+                    if (errorDiv) {
+                        errorDiv.textContent = 'Firebase authentication is not available, please try the local login.';
+                        errorDiv.className = 'alert alert-warning';
+                        errorDiv.style.display = 'block';
+                    }
+                }
+            });
+        }
     });
 </script>
 {% endblock %}

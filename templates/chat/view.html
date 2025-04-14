@@ -1,0 +1,1380 @@
+{% extends "base.html" %}
+
+{% block title %}{{ chat.name }} | Messages | SocialConnect{% endblock %}
+
+{% block additional_css %}
+<style>
+    .chat-container {
+        height: calc(100vh - 200px);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+    
+    .chat-header {
+        padding: 15px;
+        border-bottom: 1px solid var(--bs-border-color);
+    }
+    
+    .chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 15px;
+    }
+    
+    .chat-input {
+        padding: 15px;
+        border-top: 1px solid var(--bs-border-color);
+    }
+    
+    .message {
+        margin-bottom: 15px;
+        max-width: 75%;
+    }
+    
+    .message.outgoing {
+        margin-left: auto;
+    }
+    
+    .message-content {
+        padding: 10px 15px;
+        border-radius: 18px;
+        position: relative;
+    }
+    
+    .message.incoming .message-content {
+        background-color: var(--bs-dark-bg-subtle);
+        border-bottom-left-radius: 5px;
+    }
+    
+    .message.outgoing .message-content {
+        background-color: var(--bs-primary);
+        color: white;
+        border-bottom-right-radius: 5px;
+    }
+    
+    .message-time {
+        font-size: 0.75rem;
+        margin-top: 5px;
+        opacity: 0.7;
+    }
+    
+    .message.incoming .message-time {
+        text-align: left;
+    }
+    
+    .message.outgoing .message-time {
+        text-align: right;
+    }
+    
+    .avatar {
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+    
+    .typing-indicator {
+        display: flex;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+    
+    .typing-indicator .dots {
+        display: flex;
+        margin-left: 10px;
+    }
+    
+    .typing-indicator .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background-color: var(--bs-secondary);
+        margin-right: 3px;
+        animation: typing-animation 1.4s infinite;
+    }
+    
+    .typing-indicator .dot:nth-child(2) {
+        animation-delay: 0.2s;
+    }
+    
+    .typing-indicator .dot:nth-child(3) {
+        animation-delay: 0.4s;
+    }
+    
+    @keyframes typing-animation {
+        0% { transform: translateY(0px); opacity: 0.5; }
+        25% { transform: translateY(-5px); opacity: 1; }
+        50% { transform: translateY(0px); opacity: 0.5; }
+        100% { transform: translateY(0px); opacity: 0.5; }
+    }
+    
+    .media-message img {
+        max-width: 100%;
+        max-height: 300px;
+        border-radius: 10px;
+    }
+    
+    .system-message {
+        text-align: center;
+        margin: 20px 0;
+        color: var(--bs-secondary);
+        font-size: 0.9rem;
+    }
+    
+    .dropdown-menu {
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    }
+    
+    .emoji-picker {
+        position: absolute;
+        bottom: 70px;
+        right: 20px;
+        width: 300px;
+        height: 300px;
+        background-color: var(--bs-dark-bg-subtle);
+        border: 1px solid var(--bs-border-color);
+        border-radius: 10px;
+        z-index: 1000;
+        overflow-y: auto;
+        display: none;
+    }
+    
+    .emoji-picker.show {
+        display: block;
+    }
+    
+    .emoji-picker .emoji-grid {
+        display: grid;
+        grid-template-columns: repeat(8, 1fr);
+        gap: 5px;
+        padding: 10px;
+    }
+    
+    .emoji-picker .emoji-grid button {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        border-radius: 4px;
+        padding: 5px;
+    }
+    
+    .emoji-picker .emoji-grid button:hover {
+        background-color: var(--bs-dark-bg-subtle);
+    }
+    
+    /* Message read status */
+    .read-status {
+        font-size: 0.7rem;
+        margin-top: 2px;
+    }
+    
+    /* Message options */
+    .message-actions {
+        position: absolute;
+        top: 5px;
+        right: 10px;
+        display: none;
+    }
+    
+    .message-content:hover .message-actions {
+        display: block;
+    }
+    
+    /* Loading message indicator */
+    .message-loading {
+        opacity: 0.6;
+    }
+    
+    /* Scrollbar styling */
+    .chat-messages::-webkit-scrollbar {
+        width: 6px;
+    }
+    
+    .chat-messages::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    
+    .chat-messages::-webkit-scrollbar-thumb {
+        background-color: var(--bs-secondary);
+        border-radius: 3px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="chat-container">
+        <!-- Chat header -->
+        <div class="chat-header d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+                {% if chat.is_group %}
+                    <img src="/static/images/group-avatar.svg" alt="{{ chat.name }}" class="avatar me-3">
+                    <div>
+                        <h5 class="mb-0">{{ chat.name }}</h5>
+                        <small class="text-muted" id="membersCount">Loading members...</small>
+                    </div>
+                {% else %}
+                    <!-- For direct messages, show the other user -->
+                    <div id="otherUserInfo">
+                        <div class="d-flex align-items-center">
+                            <div class="spinner-border spinner-border-sm text-primary me-3" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <div>Loading conversation...</div>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="dropdown">
+                <button class="btn btn-light btn-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-three-dots-vertical"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    {% if chat.is_group %}
+                        <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#membersModal"><i class="bi bi-people me-2"></i> View Members</a></li>
+                        <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#addMemberModal"><i class="bi bi-person-plus me-2"></i> Add Member</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-danger" href="#" onclick="leaveChat()"><i class="bi bi-box-arrow-right me-2"></i> Leave Group</a></li>
+                    {% else %}
+                        <li><a class="dropdown-item" href="#" id="viewProfileButton"><i class="bi bi-person me-2"></i> View Profile</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-danger" href="#" onclick="deleteChat()"><i class="bi bi-trash me-2"></i> Delete Conversation</a></li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Chat messages area -->
+        <div class="chat-messages" id="messagesContainer">
+            <div class="d-flex justify-content-center my-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading messages...</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Chat input area -->
+        <div class="chat-input">
+            <div class="input-group">
+                <button class="btn btn-outline-secondary" type="button" id="attachButton">
+                    <i class="bi bi-paperclip"></i>
+                </button>
+                <input type="text" class="form-control" id="messageInput" placeholder="Type a message...">
+                <button class="btn btn-outline-secondary" type="button" id="emojiButton">
+                    <i class="bi bi-emoji-smile"></i>
+                </button>
+                <button class="btn btn-primary" type="button" id="sendButton">
+                    <i class="bi bi-send"></i>
+                </button>
+            </div>
+            
+            <!-- Hidden file input -->
+            <input type="file" id="fileInput" style="display: none" accept="image/*">
+            
+            <!-- Emoji picker -->
+            <div class="emoji-picker" id="emojiPicker">
+                <div class="p-2 border-bottom">
+                    <div class="input-group input-group-sm">
+                        <input type="text" class="form-control" placeholder="Search emojis" id="emojiSearch">
+                        <button class="btn btn-outline-secondary" type="button" id="closeEmojiPicker">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="emoji-grid" id="emojiGrid">
+                    <!-- Emojis will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Members Modal for Group Chats -->
+{% if chat.is_group %}
+<div class="modal fade" id="membersModal" tabindex="-1" aria-labelledby="membersModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="membersModalLabel">Group Members</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="membersList">
+                    <div class="d-flex justify-content-center py-3">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading members...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Member Modal for Group Chats -->
+<div class="modal fade" id="addMemberModal" tabindex="-1" aria-labelledby="addMemberModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addMemberModalLabel">Add Member</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="userSearch" class="form-label">Search for a user</label>
+                    <input type="text" class="form-control" id="userSearch" placeholder="Enter username...">
+                </div>
+                
+                <div id="userSearchResults">
+                    <div class="text-center text-muted py-3">
+                        Search for a user to add to the group
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="addMemberButton" disabled>Add</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block additional_js %}
+<script>
+    // Chat ID from URL
+    const chatId = {{ chat.id }};
+    
+    // Current user ID for determining message direction
+    let currentUserId = null;
+    
+    // MQTT client status
+    let mqttConnected = false;
+    
+    // Keep track of loaded messages to avoid duplicates
+    let loadedMessages = new Set();
+    
+    // Common emojis for quick picker
+    const commonEmojis = [
+        '😀', '😂', '😊', '🥰', '😍', '😒', '😢', '😭', '😎', '🙄',
+        '👍', '👎', '👌', '🙏', '💪', '🤝', '👋', '✌️', '🤞', '❤️',
+        '💯', '🔥', '⭐', '🎉', '👏', '🤔', '🙂', '😉', '😘', '🤗',
+        '😅', '😁', '😜', '😋', '🤓', '😴', '😮', '😳', '🤯', '🥳'
+    ];
+    
+    // Initialize when the DOM is ready
+    document.addEventListener('DOMContentLoaded', () => {
+        // Check if user is logged in
+        if (!isLoggedIn()) {
+            window.location.href = '/auth/login?next=' + encodeURIComponent(window.location.pathname);
+            return;
+        }
+        
+        // Get current user ID
+        currentUserId = getCurrentUserId();
+        
+        // Connect to MQTT for real-time messaging
+        connectToMqtt()
+            .then(() => joinChatRoom())
+            .catch(error => console.error('MQTT connection error:', error));
+        
+        // Load chat data
+        loadChatDetails();
+        
+        // Load initial messages
+        loadMessages();
+        
+        // Set up event listeners
+        document.getElementById('sendButton').addEventListener('click', sendMessage);
+        document.getElementById('messageInput').addEventListener('keypress', event => {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        });
+        
+        document.getElementById('attachButton').addEventListener('click', () => {
+            document.getElementById('fileInput').click();
+        });
+        
+        document.getElementById('fileInput').addEventListener('change', handleFileUpload);
+        
+        document.getElementById('emojiButton').addEventListener('click', toggleEmojiPicker);
+        document.getElementById('closeEmojiPicker').addEventListener('click', toggleEmojiPicker);
+        
+        // Set up emoji grid
+        setupEmojiPicker();
+        
+        // Search for users to add to group (for group chats)
+        if (document.getElementById('userSearch')) {
+            document.getElementById('userSearch').addEventListener('input', debounce(searchUsers, 300));
+        }
+        
+        // Add member button
+        if (document.getElementById('addMemberButton')) {
+            document.getElementById('addMemberButton').addEventListener('click', addMember);
+        }
+        
+        // Handle modal events
+        if (document.getElementById('membersModal')) {
+            document.getElementById('membersModal').addEventListener('shown.bs.modal', loadMembers);
+        }
+        
+        // Clean up when leaving the page
+        window.addEventListener('beforeunload', () => {
+            leaveChatRoom();
+        });
+    });
+    
+    // Check if the user is logged in
+    function isLoggedIn() {
+        // This is a simple check that would need to be replaced with actual authentication logic
+        return true; // Assuming the server-side login_required decorator already handles this
+    }
+    
+    // Get the current user ID
+    function getCurrentUserId() {
+        // In a real app, this would come from the authentication system
+        // For now, we'll assume it's passed from the server
+        return {{ g.user.id }}; // This should be replaced with the actual user ID
+    }
+    
+    // Connect to MQTT server
+    async function connectToMqtt() {
+        try {
+            const response = await fetch('/chat/api/mqtt/connect', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to connect to MQTT server');
+            }
+            
+            const data = await response.json();
+            mqttConnected = data.success;
+            
+            return data.success;
+        } catch (error) {
+            console.error('MQTT connection error:', error);
+            return false;
+        }
+    }
+    
+    // Join the chat's MQTT topic
+    async function joinChatRoom() {
+        if (!mqttConnected) {
+            return false;
+        }
+        
+        try {
+            const response = await fetch('/chat/api/mqtt/join', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ chat_id: chatId })
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to join chat room');
+            }
+            
+            const data = await response.json();
+            return data.success;
+        } catch (error) {
+            console.error('Error joining chat room:', error);
+            return false;
+        }
+    }
+    
+    // Leave the chat's MQTT topic
+    async function leaveChatRoom() {
+        if (!mqttConnected) {
+            return false;
+        }
+        
+        try {
+            const response = await fetch('/chat/api/mqtt/leave', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ chat_id: chatId })
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to leave chat room');
+            }
+            
+            const data = await response.json();
+            return data.success;
+        } catch (error) {
+            console.error('Error leaving chat room:', error);
+            return false;
+        }
+    }
+    
+    // Load chat details
+    async function loadChatDetails() {
+        try {
+            // For group chats, just update the member count
+            if ({{ chat.is_group|lower }}) {
+                const response = await fetch(`/chat/api/chats/${chatId}/members`);
+                if (!response.ok) {
+                    throw new Error('Failed to load members');
+                }
+                
+                const members = await response.json();
+                document.getElementById('membersCount').textContent = `${members.length} members`;
+            } 
+            // For direct messages, show the other user's info
+            else {
+                const response = await fetch(`/chat/api/chats/${chatId}/members`);
+                if (!response.ok) {
+                    throw new Error('Failed to load members');
+                }
+                
+                const members = await response.json();
+                
+                // Find the other user (not the current user)
+                const otherMember = members.find(member => member.user.id !== currentUserId);
+                
+                if (otherMember) {
+                    document.getElementById('otherUserInfo').innerHTML = `
+                        <div class="d-flex align-items-center">
+                            <img src="${otherMember.user.profile_pic || '/static/images/default-avatar.svg'}" alt="${otherMember.user.username}" class="avatar me-3">
+                            <div>
+                                <h5 class="mb-0">${otherMember.user.username}</h5>
+                                <small class="text-muted" id="onlineStatus">Offline</small>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Update view profile button
+                    if (document.getElementById('viewProfileButton')) {
+                        document.getElementById('viewProfileButton').href = `/user/${otherMember.user.username}`;
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error loading chat details:', error);
+        }
+    }
+    
+    // Load chat messages
+    async function loadMessages(page = 1) {
+        try {
+            const messagesContainer = document.getElementById('messagesContainer');
+            
+            // Show loading indicator for the first page
+            if (page === 1) {
+                messagesContainer.innerHTML = `
+                    <div class="d-flex justify-content-center my-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading messages...</span>
+                        </div>
+                    </div>
+                `;
+            } else {
+                // Show loading indicator at the top for pagination
+                const loadingIndicator = document.createElement('div');
+                loadingIndicator.className = 'd-flex justify-content-center my-3';
+                loadingIndicator.innerHTML = `
+                    <div class="spinner-border spinner-border-sm text-primary" role="status">
+                        <span class="visually-hidden">Loading more messages...</span>
+                    </div>
+                `;
+                messagesContainer.prepend(loadingIndicator);
+            }
+            
+            const response = await fetch(`/chat/api/chats/${chatId}/messages?page=${page}&per_page=20`);
+            if (!response.ok) {
+                throw new Error('Failed to load messages');
+            }
+            
+            const data = await response.json();
+            
+            // Remove loading indicator
+            if (page === 1) {
+                messagesContainer.innerHTML = '';
+            } else {
+                messagesContainer.removeChild(messagesContainer.firstChild);
+            }
+            
+            // Display messages
+            if (data.messages.length === 0 && page === 1) {
+                messagesContainer.innerHTML = `
+                    <div class="text-center my-5">
+                        <i class="bi bi-chat-dots fs-1 mb-3 text-muted"></i>
+                        <h5>No messages yet</h5>
+                        <p class="text-muted">Start the conversation by sending a message.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // If load more, need to preserve scroll position
+            const scrollHeight = messagesContainer.scrollHeight;
+            const scrollTop = messagesContainer.scrollTop;
+            
+            // Add each message to the container (in reverse order since we're prepending)
+            data.messages.reverse().forEach(message => {
+                if (!loadedMessages.has(message.id)) {
+                    const messageElement = createMessageElement(message);
+                    messagesContainer.prepend(messageElement);
+                    loadedMessages.add(message.id);
+                }
+            });
+            
+            // For pagination, maintain scroll position
+            if (page > 1) {
+                messagesContainer.scrollTop = messagesContainer.scrollHeight - scrollHeight + scrollTop;
+            } else {
+                // Scroll to bottom for first page
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+            
+            // Add load more button if there are more pages
+            if (data.pagination.has_next) {
+                const loadMoreButton = document.createElement('div');
+                loadMoreButton.className = 'text-center my-3';
+                loadMoreButton.innerHTML = `
+                    <button class="btn btn-sm btn-outline-secondary" onclick="loadMessages(${page + 1})">
+                        Load earlier messages
+                    </button>
+                `;
+                messagesContainer.prepend(loadMoreButton);
+            }
+            
+            // Mark messages as read
+            markMessagesAsRead(data.messages.map(m => m.id));
+            
+            // Set up infinite scroll
+            setupScrollListener();
+            
+        } catch (error) {
+            console.error('Error loading messages:', error);
+            document.getElementById('messagesContainer').innerHTML = `
+                <div class="alert alert-danger m-3">
+                    Failed to load messages. Please try again later.
+                </div>
+            `;
+        }
+    }
+    
+    // Create a message element
+    function createMessageElement(message) {
+        const isOutgoing = message.user_id === currentUserId;
+        const direction = isOutgoing ? 'outgoing' : 'incoming';
+        
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${direction}`;
+        messageDiv.dataset.messageId = message.id;
+        
+        let messageContent = '';
+        
+        if (message.message_type === 'system') {
+            // System message (centered notification)
+            messageDiv.className = 'system-message';
+            messageDiv.innerHTML = `<div>${message.content}</div>`;
+            return messageDiv;
+        }
+        
+        // Regular message (text or media)
+        if (message.message_type === 'image') {
+            // Image message
+            messageContent = `
+                <div class="message-content media-message">
+                    <img src="${message.media_url}" alt="Shared image" loading="lazy">
+                    ${message.content ? `<div class="mt-2">${message.content}</div>` : ''}
+                    ${createMessageActions(message, isOutgoing)}
+                </div>
+                <div class="message-time">
+                    ${formatMessageTime(message.created_at)}
+                    ${isOutgoing ? createReadStatus(message) : ''}
+                </div>
+            `;
+        } else {
+            // Text message
+            messageContent = `
+                <div class="message-content">
+                    ${message.content}
+                    ${createMessageActions(message, isOutgoing)}
+                </div>
+                <div class="message-time">
+                    ${formatMessageTime(message.created_at)}
+                    ${isOutgoing ? createReadStatus(message) : ''}
+                </div>
+            `;
+        }
+        
+        messageDiv.innerHTML = messageContent;
+        return messageDiv;
+    }
+    
+    // Create message action buttons
+    function createMessageActions(message, isOutgoing) {
+        if (message.is_deleted) return '';
+        
+        let actions = '';
+        
+        if (isOutgoing) {
+            actions = `
+                <div class="message-actions">
+                    <div class="dropdown">
+                        <button class="btn btn-sm text-white" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-three-dots-vertical"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="#" onclick="deleteMessage(${message.id})"><i class="bi bi-trash me-2"></i> Delete</a></li>
+                        </ul>
+                    </div>
+                </div>
+            `;
+        }
+        
+        return actions;
+    }
+    
+    // Create read status indicator
+    function createReadStatus(message) {
+        if (message.is_deleted) return '';
+        
+        // Count how many people have read the message
+        const readCount = message.read_by ? message.read_by.length : 0;
+        
+        if (readCount === 0) {
+            return '<span class="read-status"><i class="bi bi-check"></i> Sent</span>';
+        } else {
+            return '<span class="read-status"><i class="bi bi-check-all"></i> Read</span>';
+        }
+    }
+    
+    // Send a new message
+    async function sendMessage() {
+        const messageInput = document.getElementById('messageInput');
+        const content = messageInput.value.trim();
+        
+        if (!content) return;
+        
+        // Clear input immediately for better UX
+        messageInput.value = '';
+        
+        // Create a temporary message element to show sending status
+        const tempId = 'temp-' + Date.now();
+        const tempMessage = {
+            id: tempId,
+            user_id: currentUserId,
+            content: content,
+            message_type: 'text',
+            created_at: new Date().toISOString(),
+            is_deleted: false,
+            read_by: []
+        };
+        
+        const messageElement = createMessageElement(tempMessage);
+        messageElement.classList.add('message-loading');
+        document.getElementById('messagesContainer').appendChild(messageElement);
+        
+        // Scroll to the new message
+        document.getElementById('messagesContainer').scrollTop = document.getElementById('messagesContainer').scrollHeight;
+        
+        try {
+            const response = await fetch(`/chat/api/chats/${chatId}/messages/send`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    content: content,
+                    type: 'text'
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to send message');
+            }
+            
+            const data = await response.json();
+            
+            // Update the temporary message with the real one
+            messageElement.dataset.messageId = data.id;
+            messageElement.classList.remove('message-loading');
+            
+            // Add to loaded messages set
+            loadedMessages.add(data.id);
+            
+        } catch (error) {
+            console.error('Error sending message:', error);
+            
+            // Show error on the temporary message
+            messageElement.querySelector('.message-content').innerHTML += `
+                <div class="text-danger small mt-1">
+                    <i class="bi bi-exclamation-triangle"></i> Failed to send
+                </div>
+            `;
+            messageElement.classList.remove('message-loading');
+        }
+    }
+    
+    // Handle file upload for images
+    async function handleFileUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        // Check if it's an image
+        if (!file.type.startsWith('image/')) {
+            alert('Only images are supported at this time.');
+            return;
+        }
+        
+        // Create a temporary message element to show uploading status
+        const tempId = 'temp-' + Date.now();
+        const tempMessage = {
+            id: tempId,
+            user_id: currentUserId,
+            content: 'Uploading image...',
+            message_type: 'image',
+            media_url: URL.createObjectURL(file),
+            created_at: new Date().toISOString(),
+            is_deleted: false,
+            read_by: []
+        };
+        
+        const messageElement = createMessageElement(tempMessage);
+        messageElement.classList.add('message-loading');
+        document.getElementById('messagesContainer').appendChild(messageElement);
+        
+        // Scroll to the new message
+        document.getElementById('messagesContainer').scrollTop = document.getElementById('messagesContainer').scrollHeight;
+        
+        try {
+            // Create form data for the file upload
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('chat_id', chatId);
+            formData.append('message_type', 'image');
+            
+            const response = await fetch(`/chat/api/media/upload`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to upload image');
+            }
+            
+            const data = await response.json();
+            
+            // Send the message with the uploaded image URL
+            const messageResponse = await fetch(`/chat/api/chats/${chatId}/messages/send`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    content: '',
+                    type: 'image',
+                    media_url: data.url
+                })
+            });
+            
+            if (!messageResponse.ok) {
+                throw new Error('Failed to send message with image');
+            }
+            
+            const messageData = await messageResponse.json();
+            
+            // Update the temporary message with the real one
+            messageElement.dataset.messageId = messageData.id;
+            messageElement.classList.remove('message-loading');
+            
+            // Add to loaded messages set
+            loadedMessages.add(messageData.id);
+            
+            // Reset file input
+            document.getElementById('fileInput').value = '';
+            
+        } catch (error) {
+            console.error('Error uploading image:', error);
+            
+            // Show error on the temporary message
+            messageElement.querySelector('.message-content').innerHTML += `
+                <div class="text-danger small mt-1">
+                    <i class="bi bi-exclamation-triangle"></i> Failed to upload
+                </div>
+            `;
+            messageElement.classList.remove('message-loading');
+        }
+    }
+    
+    // Delete a message
+    async function deleteMessage(messageId) {
+        if (!confirm('Are you sure you want to delete this message? This cannot be undone.')) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/chat/api/chats/${chatId}/messages/${messageId}/delete`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to delete message');
+            }
+            
+            // Update the message in the UI
+            const messageElement = document.querySelector(`.message[data-message-id="${messageId}"]`);
+            if (messageElement) {
+                const contentEl = messageElement.querySelector('.message-content');
+                contentEl.innerHTML = '<i>This message was deleted</i>';
+                contentEl.style.fontStyle = 'italic';
+                contentEl.style.color = 'var(--bs-secondary)';
+                
+                // Remove any action buttons
+                const actionsEl = messageElement.querySelector('.message-actions');
+                if (actionsEl) actionsEl.remove();
+            }
+            
+        } catch (error) {
+            console.error('Error deleting message:', error);
+            alert('Failed to delete message. Please try again later.');
+        }
+    }
+    
+    // Mark messages as read
+    async function markMessagesAsRead(messageIds) {
+        if (!messageIds || messageIds.length === 0) return;
+        
+        try {
+            await fetch(`/chat/api/chats/${chatId}/messages/read`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    message_ids: messageIds
+                })
+            });
+        } catch (error) {
+            console.error('Error marking messages as read:', error);
+        }
+    }
+    
+    // Load chat members (for group chats)
+    async function loadMembers() {
+        if (!{{ chat.is_group|lower }}) return;
+        
+        const membersListEl = document.getElementById('membersList');
+        
+        try {
+            const response = await fetch(`/chat/api/chats/${chatId}/members`);
+            if (!response.ok) {
+                throw new Error('Failed to load members');
+            }
+            
+            const members = await response.json();
+            
+            if (members.length === 0) {
+                membersListEl.innerHTML = `
+                    <div class="text-center py-3">
+                        <p class="text-muted">No members found</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            membersListEl.innerHTML = members.map(member => `
+                <div class="d-flex justify-content-between align-items-center p-2 border-bottom">
+                    <div class="d-flex align-items-center">
+                        <img src="${member.user.profile_pic || '/static/images/default-avatar.svg'}" alt="${member.user.username}" class="avatar me-3" style="width: 40px; height: 40px;">
+                        <div>
+                            <div>${member.user.username}</div>
+                            <small class="text-${member.role === 'admin' ? 'primary' : 'muted'}">${member.role.charAt(0).toUpperCase() + member.role.slice(1)}</small>
+                        </div>
+                    </div>
+                    ${member.user.id !== currentUserId ? `
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-three-dots-vertical"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                ${member.role !== 'admin' ? `
+                                    <li><a class="dropdown-item" href="#" onclick="makeAdmin(${member.user.id})"><i class="bi bi-shield me-2"></i> Make Admin</a></li>
+                                ` : ''}
+                                <li><a class="dropdown-item text-danger" href="#" onclick="removeMember(${member.user.id})"><i class="bi bi-person-x me-2"></i> Remove</a></li>
+                            </ul>
+                        </div>
+                    ` : ''}
+                </div>
+            `).join('');
+            
+        } catch (error) {
+            console.error('Error loading members:', error);
+            membersListEl.innerHTML = `
+                <div class="alert alert-danger m-3">
+                    Failed to load members. Please try again later.
+                </div>
+            `;
+        }
+    }
+    
+    // Search for users to add to the group
+    async function searchUsers() {
+        const query = document.getElementById('userSearch').value.trim();
+        const resultsContainer = document.getElementById('userSearchResults');
+        
+        if (query.length < 2) {
+            resultsContainer.innerHTML = `
+                <div class="text-center text-muted py-3">
+                    Enter at least 2 characters to search
+                </div>
+            `;
+            document.getElementById('addMemberButton').disabled = true;
+            return;
+        }
+        
+        resultsContainer.innerHTML = `
+            <div class="d-flex justify-content-center py-3">
+                <div class="spinner-border spinner-border-sm text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        `;
+        
+        try {
+            const response = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`);
+            if (!response.ok) {
+                throw new Error('Failed to search users');
+            }
+            
+            const users = await response.json();
+            
+            if (users.length === 0) {
+                resultsContainer.innerHTML = `
+                    <div class="text-center text-muted py-3">
+                        No users found matching "${query}"
+                    </div>
+                `;
+                document.getElementById('addMemberButton').disabled = true;
+                return;
+            }
+            
+            // Get current members to filter them out
+            const membersResponse = await fetch(`/chat/api/chats/${chatId}/members`);
+            if (!membersResponse.ok) {
+                throw new Error('Failed to load members');
+            }
+            
+            const members = await membersResponse.json();
+            const memberIds = members.map(m => m.user.id);
+            
+            // Filter out current members
+            const filteredUsers = users.filter(user => !memberIds.includes(user.id));
+            
+            if (filteredUsers.length === 0) {
+                resultsContainer.innerHTML = `
+                    <div class="text-center text-muted py-3">
+                        All matching users are already in the group
+                    </div>
+                `;
+                document.getElementById('addMemberButton').disabled = true;
+                return;
+            }
+            
+            resultsContainer.innerHTML = filteredUsers.map(user => `
+                <div class="form-check d-flex align-items-center p-2 border-bottom">
+                    <input class="form-check-input me-3" type="radio" name="selectedUser" id="user${user.id}" value="${user.id}">
+                    <label class="form-check-label d-flex align-items-center" for="user${user.id}">
+                        <img src="${user.profile_pic || '/static/images/default-avatar.svg'}" alt="${user.username}" class="avatar me-3" style="width: 40px; height: 40px;">
+                        <div>
+                            <div>${user.username}</div>
+                            <small class="text-muted">${user.display_name || ''}</small>
+                        </div>
+                    </label>
+                </div>
+            `).join('');
+            
+            // Enable the add button
+            document.getElementById('addMemberButton').disabled = false;
+            
+        } catch (error) {
+            console.error('Error searching users:', error);
+            resultsContainer.innerHTML = `
+                <div class="alert alert-danger">
+                    Failed to search users. Please try again later.
+                </div>
+            `;
+            document.getElementById('addMemberButton').disabled = true;
+        }
+    }
+    
+    // Add a member to the group
+    async function addMember() {
+        const selectedUserEl = document.querySelector('input[name="selectedUser"]:checked');
+        
+        if (!selectedUserEl) {
+            alert('Please select a user to add');
+            return;
+        }
+        
+        const userId = selectedUserEl.value;
+        
+        try {
+            const response = await fetch(`/chat/api/chats/${chatId}/members/add`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    user_id: userId
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to add member');
+            }
+            
+            // Close the modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('addMemberModal'));
+            modal.hide();
+            
+            // Clear the search input
+            document.getElementById('userSearch').value = '';
+            document.getElementById('userSearchResults').innerHTML = `
+                <div class="text-center text-muted py-3">
+                    Search for a user to add to the group
+                </div>
+            `;
+            
+            // Reload members count
+            loadChatDetails();
+            
+            // Display a success message
+            alert('Member added successfully');
+            
+        } catch (error) {
+            console.error('Error adding member:', error);
+            alert('Failed to add member. Please try again later.');
+        }
+    }
+    
+    // Make a user an admin
+    async function makeAdmin(userId) {
+        if (!confirm('Are you sure you want to make this user an admin? They will have the same permissions as you.')) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/chat/api/chats/${chatId}/admin`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    user_id: userId
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to make admin');
+            }
+            
+            // Reload members list
+            loadMembers();
+            
+        } catch (error) {
+            console.error('Error making admin:', error);
+            alert('Failed to make user an admin. Please try again later.');
+        }
+    }
+    
+    // Remove a member from the group
+    async function removeMember(userId) {
+        if (!confirm('Are you sure you want to remove this user from the group?')) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/chat/api/chats/${chatId}/members/remove`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    user_id: userId
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to remove member');
+            }
+            
+            // Reload members list
+            loadMembers();
+            
+            // Reload members count
+            loadChatDetails();
+            
+        } catch (error) {
+            console.error('Error removing member:', error);
+            alert('Failed to remove member. Please try again later.');
+        }
+    }
+    
+    // Leave the group chat
+    async function leaveChat() {
+        if (!confirm('Are you sure you want to leave this group? You will need to be added back by another member to rejoin.')) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/chat/api/chats/${chatId}/leave`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to leave group');
+            }
+            
+            // Redirect to the chats list
+            window.location.href = '/chat/';
+            
+        } catch (error) {
+            console.error('Error leaving group:', error);
+            alert('Failed to leave group. Please try again later.');
+        }
+    }
+    
+    // Delete a direct message conversation
+    function deleteChat() {
+        alert('This feature is not yet implemented.');
+    }
+    
+    // Format message timestamp in a user-friendly way
+    function formatMessageTime(timestamp) {
+        const date = new Date(timestamp);
+        const now = new Date();
+        const diffMs = now - date;
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        
+        if (diffDays === 0) {
+            // Today - show time
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        } else if (diffDays === 1) {
+            // Yesterday
+            return 'Yesterday ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        } else if (diffDays < 7) {
+            // This week - show day name
+            return date.toLocaleDateString([], { weekday: 'short' }) + ' ' + 
+                   date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        } else {
+            // Older - show date
+            return date.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + 
+                   date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+    }
+    
+    // Toggle emoji picker visibility
+    function toggleEmojiPicker() {
+        const emojiPicker = document.getElementById('emojiPicker');
+        emojiPicker.classList.toggle('show');
+        
+        if (emojiPicker.classList.contains('show')) {
+            document.getElementById('emojiSearch').focus();
+        }
+    }
+    
+    // Setup emoji picker with common emojis
+    function setupEmojiPicker() {
+        const emojiGrid = document.getElementById('emojiGrid');
+        
+        emojiGrid.innerHTML = commonEmojis.map(emoji => 
+            `<button type="button" onclick="insertEmoji('${emoji}')">${emoji}</button>`
+        ).join('');
+        
+        // Setup emoji search
+        document.getElementById('emojiSearch').addEventListener('input', searchEmojis);
+    }
+    
+    // Search for emojis
+    function searchEmojis(event) {
+        const query = event.target.value.trim().toLowerCase();
+        const emojiGrid = document.getElementById('emojiGrid');
+        
+        if (!query) {
+            // Reset to common emojis
+            emojiGrid.innerHTML = commonEmojis.map(emoji => 
+                `<button type="button" onclick="insertEmoji('${emoji}')">${emoji}</button>`
+            ).join('');
+            return;
+        }
+        
+        // Filter emojis
+        const filtered = commonEmojis.filter(emoji => 
+            // Simple emoji search based on emoji characters
+            emoji.toLowerCase().includes(query)
+        );
+        
+        if (filtered.length === 0) {
+            emojiGrid.innerHTML = `<p class="text-center w-100">No emojis found</p>`;
+            return;
+        }
+        
+        emojiGrid.innerHTML = filtered.map(emoji => 
+            `<button type="button" onclick="insertEmoji('${emoji}')">${emoji}</button>`
+        ).join('');
+    }
+    
+    // Insert emoji into the message input
+    function insertEmoji(emoji) {
+        const messageInput = document.getElementById('messageInput');
+        messageInput.value += emoji;
+        messageInput.focus();
+    }
+    
+    // Set up infinite scroll for loading more messages
+    function setupScrollListener() {
+        const messagesContainer = document.getElementById('messagesContainer');
+        
+        messagesContainer.addEventListener('scroll', debounce(function() {
+            // Load more messages when scrolled to top
+            if (messagesContainer.scrollTop === 0) {
+                // Check if we already have a load more button
+                const loadMoreButton = messagesContainer.querySelector('button.btn-outline-secondary');
+                if (loadMoreButton) {
+                    loadMoreButton.click();
+                }
+            }
+        }, 200));
+    }
+    
+    // Utility function to debounce frequent events
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,106 @@
+/* Auth specific styling */
+
+.auth-card {
+  max-width: 500px;
+  margin: 2rem auto;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.auth-card .card-header {
+  padding: 1.5rem;
+}
+
+.auth-card .card-body {
+  padding: 2rem;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  margin: 1.5rem 0;
+  color: var(--light-text);
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  border-bottom: 1px solid var(--divider-color);
+}
+
+.auth-divider span {
+  padding: 0 0.5rem;
+}
+
+/* OAuth buttons */
+.btn-google {
+  background-color: #ffffff;
+  color: #757575;
+  border-color: #dbdbdb;
+}
+
+.btn-google:hover {
+  background-color: #f5f5f5;
+  color: #666666;
+}
+
+.btn-facebook {
+  background-color: #4267B2;
+  color: white;
+  border-color: #4267B2;
+}
+
+.btn-facebook:hover {
+  background-color: #385898;
+  color: white;
+  border-color: #385898;
+}
+
+/* Firebase UI overrides */
+#firebaseui-auth-container {
+  min-height: 50px;
+}
+
+.firebaseui-container {
+  max-width: 100% !important;
+  box-shadow: none !important;
+  background-color: transparent !important;
+}
+
+.firebaseui-card-content {
+  padding: 0 !important;
+}
+
+.firebaseui-idp-button {
+  border-radius: 4px !important;
+  box-shadow: none !important;
+  max-width: 100% !important;
+}
+
+/* Animated background for auth pages */
+.auth-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: -1;
+  background: linear-gradient(135deg, var(--dark-bg) 0%, var(--surface-bg) 100%);
+}
+
+.auth-card {
+  background-color: rgba(36, 37, 38, 0.9);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--divider-color);
+}
+
+/* Responsive adjustments */
+@media (max-width: 576px) {
+  .auth-card {
+    margin: 1rem auto;
+  }
+  
+  .auth-card .card-body {
+    padding: 1.5rem;
+  }
+}
