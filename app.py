@@ -11,8 +11,17 @@ from flask_socketio import SocketIO
 from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.utils import secure_filename
 
+# Load configuration
+from config import get_config, get_allowed_image_extensions, get_allowed_video_extensions, get_max_upload_size
+
 # Set up logger
 logger = logging.getLogger(__name__)
+log_level = get_config('development.log_level', 'DEBUG')
+if isinstance(log_level, str):
+    numeric_level = getattr(logging, log_level.upper(), logging.DEBUG)
+    logging.basicConfig(level=numeric_level)
+else:
+    logging.basicConfig(level=logging.DEBUG)
 
 # Set up the Base class for SQLAlchemy models
 class Base(DeclarativeBase):
@@ -34,12 +43,12 @@ app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
 }
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-# Configure uploads
+# Configure uploads from config.json
 app.config["UPLOAD_FOLDER_PHOTOS"] = "static/uploads/photos"
 app.config["UPLOAD_FOLDER_VIDEOS"] = "static/uploads/videos"
-app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16MB max upload
-app.config["ALLOWED_PHOTO_EXTENSIONS"] = ["jpg", "jpeg", "png", "gif"]
-app.config["ALLOWED_VIDEO_EXTENSIONS"] = ["mp4", "webm", "ogg"]
+app.config["MAX_CONTENT_LENGTH"] = get_max_upload_size()
+app.config["ALLOWED_PHOTO_EXTENSIONS"] = get_allowed_image_extensions()
+app.config["ALLOWED_VIDEO_EXTENSIONS"] = get_allowed_video_extensions()
 
 # Create upload directories if they don't exist
 os.makedirs(app.config["UPLOAD_FOLDER_PHOTOS"], exist_ok=True)

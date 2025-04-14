@@ -7,6 +7,9 @@ from werkzeug.utils import secure_filename
 from datetime import datetime
 import json
 
+# Import configuration
+from config import get_config
+
 # Set up logger
 logger = logging.getLogger(__name__)
 
@@ -19,21 +22,54 @@ last_upload_time = {
     '0x0': 0
 }
 
-# Minimum time between uploads for each service (in seconds)
-MIN_TIME_BETWEEN_UPLOADS = 1  # 1 second to enforce rate limit (max 1 per second)
-
-# Track service availability
-service_status = {
-    'imgur': True,
-    'catbox': True,
-    'gofile': True,
-    'pixhost': True,
-    '0x0': True
-}
-
-# Configuration
+# Load configuration values with default fallbacks
+MIN_TIME_BETWEEN_UPLOADS = 1  # 1 second between uploads
 MAX_RETRIES = 3
 RETRY_DELAY = 2  # seconds
+
+# Try to get values from config, use defaults if not available
+try:
+    config_rate_limit = get_config('upload.rate_limit_seconds', 1)
+    if isinstance(config_rate_limit, int) and config_rate_limit > 0:
+        MIN_TIME_BETWEEN_UPLOADS = config_rate_limit
+
+    config_retries = get_config('upload.max_retries', 3)
+    if isinstance(config_retries, int) and config_retries > 0:
+        MAX_RETRIES = config_retries
+
+    config_delay = get_config('upload.retry_delay_seconds', 2)
+    if isinstance(config_delay, int) and config_delay > 0:
+        RETRY_DELAY = config_delay
+except:
+    logger.warning("Using default values for rate limiting and retries")
+
+# Default services
+DEFAULT_SERVICES = ['imgur', 'catbox', 'gofile', 'pixhost', '0x0']
+
+# Get available services from config
+try:
+    config_services = get_config('upload.image_services', DEFAULT_SERVICES)
+    if isinstance(config_services, list) and len(config_services) > 0:
+        AVAILABLE_SERVICES = config_services
+    else:
+        AVAILABLE_SERVICES = DEFAULT_SERVICES
+except:
+    AVAILABLE_SERVICES = DEFAULT_SERVICES
+    logger.warning("Using default available services")
+
+# Get preferred services from config
+try:
+    config_preferred = get_config('upload.preferred_services', ['imgur', 'catbox'])
+    if isinstance(config_preferred, list) and len(config_preferred) > 0:
+        PREFERRED_SERVICES = config_preferred
+    else:
+        PREFERRED_SERVICES = ['imgur', 'catbox']
+except:
+    PREFERRED_SERVICES = ['imgur', 'catbox']
+    logger.warning("Using default preferred services")
+
+# Track service availability
+service_status = {service: True for service in AVAILABLE_SERVICES}
 
 def _rate_limit(service):
     """

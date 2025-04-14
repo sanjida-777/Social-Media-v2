@@ -1,182 +1,129 @@
-// Utility functions used across the application
+/**
+ * Utility functions for the social media platform
+ */
 
-// Format date to relative time (e.g., "5 minutes ago")
-function timeAgo(dateString) {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now - date;
-  const diffSec = Math.floor(diffMs / 1000);
-  const diffMin = Math.floor(diffSec / 60);
-  const diffHour = Math.floor(diffMin / 60);
-  const diffDay = Math.floor(diffHour / 24);
-  const diffMonth = Math.floor(diffDay / 30);
-  const diffYear = Math.floor(diffMonth / 12);
+// Constants
+const DEFAULT_AVATAR = '/static/images/default-avatar.png';
+const DEFAULT_COVER = '/static/images/default-cover.jpg';
 
-  if (diffSec < 60) {
-    return 'just now';
-  } else if (diffMin < 60) {
-    return `${diffMin} minute${diffMin > 1 ? 's' : ''} ago`;
-  } else if (diffHour < 24) {
-    return `${diffHour} hour${diffHour > 1 ? 's' : ''} ago`;
-  } else if (diffDay < 30) {
-    return `${diffDay} day${diffDay > 1 ? 's' : ''} ago`;
-  } else if (diffMonth < 12) {
-    return `${diffMonth} month${diffMonth > 1 ? 's' : ''} ago`;
-  } else {
-    return `${diffYear} year${diffYear > 1 ? 's' : ''} ago`;
+// Check if we're in a Node.js environment or browser
+const isNode = typeof process !== 'undefined' && 
+  process.versions != null && 
+  process.versions.node != null;
+
+// Environment object that works in both Node.js and browser
+const env = {
+  isDevelopment: !isNode && window.location.hostname === 'localhost',
+  isProduction: !isNode && window.location.hostname !== 'localhost',
+  get: function(key, defaultValue) {
+    // In browser, try to get from localStorage first
+    if (!isNode) {
+      const value = localStorage.getItem(key);
+      if (value) return value;
+    }
+    // Return default value as fallback
+    return defaultValue;
   }
-}
+};
 
-// Format date to readable format (e.g., "Jan 1, 2022")
-function formatDate(dateString) {
-  const date = new Date(dateString);
-  return date.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  });
-}
-
-// Format time (e.g., "3:45 PM")
-function formatTime(dateString) {
-  const date = new Date(dateString);
-  return date.toLocaleTimeString('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true
-  });
-}
-
-// Create placeholder profile image with initials
-function createInitialsAvatar(name, size = 40) {
-  if (!name) name = 'User';
-  
-  // Get initials
-  const initials = name
-    .split(' ')
-    .map(part => part.charAt(0))
-    .join('')
-    .toUpperCase()
-    .substring(0, 2);
-  
-  // Create canvas
-  const canvas = document.createElement('canvas');
-  canvas.width = size;
-  canvas.height = size;
-  const context = canvas.getContext('2d');
-  
-  // Random background color
-  const hue = Math.floor(Math.random() * 360);
-  context.fillStyle = `hsl(${hue}, 70%, 60%)`;
-  context.fillRect(0, 0, canvas.width, canvas.height);
-  
-  // Text color and style
-  context.fillStyle = 'white';
-  context.font = `${size / 2}px Arial`;
-  context.textAlign = 'center';
-  context.textBaseline = 'middle';
-  
-  // Draw initials
-  context.fillText(initials, size / 2, size / 2);
-  
-  return canvas.toDataURL('image/png');
-}
-
-// Truncate text with ellipsis
-function truncateText(text, maxLength) {
-  if (!text) return '';
-  if (text.length <= maxLength) return text;
-  return text.substring(0, maxLength) + '...';
-}
-
-// Show alert/toast message
-function showToast(message, type = 'info', duration = 3000) {
-  const toastContainer = document.getElementById('toast-container');
-  if (!toastContainer) {
-    // Create toast container if it doesn't exist
-    const container = document.createElement('div');
-    container.id = 'toast-container';
-    container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
-    document.body.appendChild(container);
-  }
-  
-  const toastId = 'toast-' + Date.now();
-  const toast = `
-    <div id="${toastId}" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
-      <div class="toast-header">
-        <span class="rounded me-2 bg-${type}" style="width: 20px; height: 20px;"></span>
-        <strong class="me-auto">${type.charAt(0).toUpperCase() + type.slice(1)}</strong>
-        <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
-      </div>
-      <div class="toast-body">
-        ${message}
-      </div>
-    </div>
-  `;
-  
-  document.getElementById('toast-container').insertAdjacentHTML('beforeend', toast);
-  const toastElement = document.getElementById(toastId);
-  const bsToast = new bootstrap.Toast(toastElement, { delay: duration });
-  bsToast.show();
-  
-  // Auto remove from DOM after hiding
-  toastElement.addEventListener('hidden.bs.toast', function() {
-    toastElement.remove();
-  });
-}
-
-// Lazy load images
-function lazyLoadImages() {
-  const images = document.querySelectorAll('[data-src]');
-  
-  if ('IntersectionObserver' in window) {
-    const imageObserver = new IntersectionObserver((entries, observer) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          const img = entry.target;
-          img.src = img.dataset.src;
-          img.removeAttribute('data-src');
-          imageObserver.unobserve(img);
-        }
-      });
-    });
-    
-    images.forEach(img => imageObserver.observe(img));
-  } else {
-    // Fallback for browsers without IntersectionObserver
-    images.forEach(img => {
-      img.src = img.dataset.src;
-      img.removeAttribute('data-src');
-    });
-  }
-}
-
-// Fetch API wrapper with error handling
-async function fetchAPI(url, options = {}) {
+/**
+ * Format date for display
+ * @param {Date|string} date - Date object or ISO string
+ * @param {boolean} includeTime - Whether to include time
+ * @returns {string} - Formatted date string
+ */
+function formatDate(date, includeTime = false) {
   try {
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-      }
-    });
+    if (!date) return '';
+    const d = typeof date === 'string' ? new Date(date) : date;
     
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `Error: ${response.status}`);
+    // Check if date is valid
+    if (isNaN(d.getTime())) return '';
+    
+    const options = { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric'
+    };
+    
+    if (includeTime) {
+      options.hour = '2-digit';
+      options.minute = '2-digit';
     }
     
-    return await response.json();
+    return d.toLocaleDateString(undefined, options);
   } catch (error) {
-    console.error('API Error:', error);
-    showToast(error.message, 'danger');
-    throw error;
+    console.error('Error formatting date:', error);
+    return '';
   }
 }
 
-// Debounce function to limit how often a function is called
-function debounce(func, wait) {
+/**
+ * Format relative time (e.g., "2 hours ago")
+ * @param {Date|string} date - Date object or ISO string
+ * @returns {string} - Relative time string
+ */
+function formatRelativeTime(date) {
+  try {
+    if (!date) return '';
+    const d = typeof date === 'string' ? new Date(date) : date;
+    
+    // Check if date is valid
+    if (isNaN(d.getTime())) return '';
+    
+    const now = new Date();
+    const diffMs = now - d;
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHour = Math.floor(diffMin / 60);
+    const diffDay = Math.floor(diffHour / 24);
+    const diffMonth = Math.floor(diffDay / 30);
+    const diffYear = Math.floor(diffDay / 365);
+    
+    if (diffSec < 60) return 'just now';
+    if (diffMin < 60) return `${diffMin} minute${diffMin > 1 ? 's' : ''} ago`;
+    if (diffHour < 24) return `${diffHour} hour${diffHour > 1 ? 's' : ''} ago`;
+    if (diffDay < 30) return `${diffDay} day${diffDay > 1 ? 's' : ''} ago`;
+    if (diffMonth < 12) return `${diffMonth} month${diffMonth > 1 ? 's' : ''} ago`;
+    return `${diffYear} year${diffYear > 1 ? 's' : ''} ago`;
+  } catch (error) {
+    console.error('Error formatting relative time:', error);
+    return '';
+  }
+}
+
+/**
+ * Truncate text with ellipsis
+ * @param {string} text - Text to truncate
+ * @param {number} maxLength - Maximum length
+ * @returns {string} - Truncated text
+ */
+function truncateText(text, maxLength = 100) {
+  if (!text) return '';
+  if (text.length <= maxLength) return text;
+  return text.slice(0, maxLength) + '...';
+}
+
+/**
+ * Format a number (e.g., 1000 -> 1K)
+ * @param {number} num - Number to format
+ * @returns {string} - Formatted number
+ */
+function formatNumber(num) {
+  if (num === undefined || num === null) return '0';
+  
+  if (num < 1000) return num.toString();
+  if (num < 1000000) return (num / 1000).toFixed(1) + 'K';
+  return (num / 1000000).toFixed(1) + 'M';
+}
+
+/**
+ * Create a debounced function
+ * @param {Function} func - Function to debounce
+ * @param {number} wait - Wait time in ms
+ * @returns {Function} - Debounced function
+ */
+function debounce(func, wait = 300) {
   let timeout;
   return function(...args) {
     clearTimeout(timeout);
@@ -184,79 +131,117 @@ function debounce(func, wait) {
   };
 }
 
-// Format number with K/M suffix for thousands/millions
-function formatCount(count) {
-  if (count >= 1000000) {
-    return (count / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+/**
+ * Get the file extension from a filename
+ * @param {string} filename - Filename
+ * @returns {string} - File extension
+ */
+function getFileExtension(filename) {
+  if (!filename) return '';
+  return filename.split('.').pop().toLowerCase();
+}
+
+/**
+ * Check if a file is an image
+ * @param {string} filename - Filename
+ * @returns {boolean} - True if image
+ */
+function isImageFile(filename) {
+  const ext = getFileExtension(filename);
+  return ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext);
+}
+
+/**
+ * Check if a file is a video
+ * @param {string} filename - Filename
+ * @returns {boolean} - True if video
+ */
+function isVideoFile(filename) {
+  const ext = getFileExtension(filename);
+  return ['mp4', 'webm', 'ogg'].includes(ext);
+}
+
+/**
+ * Safely parse JSON
+ * @param {string} json - JSON string
+ * @param {*} defaultValue - Default value if parsing fails
+ * @returns {*} - Parsed object or default value
+ */
+function safeJsonParse(json, defaultValue = {}) {
+  try {
+    if (!json) return defaultValue;
+    return JSON.parse(json);
+  } catch (error) {
+    console.error('Error parsing JSON:', error);
+    return defaultValue;
   }
-  if (count >= 1000) {
-    return (count / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
-  }
-  return count.toString();
 }
 
-// Get URL query parameters
-function getQueryParams() {
-  const params = {};
-  new URLSearchParams(window.location.search).forEach((value, key) => {
-    params[key] = value;
-  });
-  return params;
-}
-
-// Document ready function (alternative to jQuery's $(document).ready())
-function onDocumentReady(fn) {
-  if (document.readyState !== 'loading') {
-    fn();
-  } else {
-    document.addEventListener('DOMContentLoaded', fn);
-  }
-}
-
-// Sanitize HTML to prevent XSS
-function sanitizeHTML(text) {
-  const element = document.createElement('div');
-  element.textContent = text;
-  return element.innerHTML;
-}
-
-// Auto resize textarea based on content
-function autoResizeTextarea(textarea) {
-  textarea.style.height = 'auto';
-  textarea.style.height = (textarea.scrollHeight) + 'px';
-}
-
-// Initialize autosize for all textareas with data-autosize attribute
-function initAutoResizeTextareas() {
-  document.querySelectorAll('textarea[data-autosize]').forEach(textarea => {
-    textarea.addEventListener('input', function() {
-      autoResizeTextarea(this);
-    });
-    
-    // Initial resize
-    autoResizeTextarea(textarea);
-  });
-}
-
-// Initialize tooltips and popovers
-function initTooltips() {
-  const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-  tooltipTriggerList.map(function (tooltipTriggerEl) {
-    return new bootstrap.Tooltip(tooltipTriggerEl);
-  });
+/**
+ * Fetch API wrapper with error handling
+ * @param {string} url - URL to fetch
+ * @param {Object} options - Fetch options
+ * @returns {Promise} - Promise with response data
+ */
+function fetchApi(url, options = {}) {
+  // Default options
+  const defaultOptions = {
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    credentials: 'same-origin'
+  };
   
-  const popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
-  popoverTriggerList.map(function (popoverTriggerEl) {
-    return new bootstrap.Popover(popoverTriggerEl);
-  });
+  // Merge options
+  const fetchOptions = { ...defaultOptions, ...options };
+  
+  // If data is provided and method is not GET, stringify body
+  if (options.data && options.method !== 'GET') {
+    fetchOptions.body = JSON.stringify(options.data);
+    delete fetchOptions.data;
+  }
+  
+  // If method is GET and data is provided, append as query string
+  if (options.data && (!options.method || options.method === 'GET')) {
+    const params = new URLSearchParams();
+    Object.entries(options.data).forEach(([key, value]) => {
+      params.append(key, value);
+    });
+    url = `${url}?${params.toString()}`;
+    delete fetchOptions.data;
+  }
+  
+  return fetch(url, fetchOptions)
+    .then(response => {
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type');
+      const isJson = contentType && contentType.includes('application/json');
+      
+      // Handle error responses
+      if (!response.ok) {
+        return isJson ? response.json().then(data => {
+          throw new Error(data.message || response.statusText);
+        }) : Promise.reject(new Error(response.statusText));
+      }
+      
+      // Parse JSON or return raw response
+      return isJson ? response.json() : response;
+    });
 }
 
-// Run common initialization functions
-function initCommon() {
-  lazyLoadImages();
-  initAutoResizeTextareas();
-  initTooltips();
+// Export functions if in Node.js environment
+if (isNode) {
+  module.exports = {
+    formatDate,
+    formatRelativeTime,
+    truncateText,
+    formatNumber,
+    debounce,
+    getFileExtension,
+    isImageFile,
+    isVideoFile,
+    safeJsonParse,
+    fetchApi,
+    env
+  };
 }
-
-// Call init when document is ready
-onDocumentReady(initCommon);

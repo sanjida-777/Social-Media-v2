@@ -1,0 +1,65 @@
+{
+  "app": {
+    "name": "Social Media Platform",
+    "description": "A Facebook-like social media platform with advanced features",
+    "version": "1.0.0"
+  },
+  "site": {
+    "site_name": "SocialConnect",
+    "domain": "socialconnect.replit.app",
+    "logo_path": "/static/images/logo.svg",
+    "favicon_path": "/static/images/favicon.ico",
+    "theme": "dark",
+    "colors": {
+      "primary": "#1877f2",
+      "secondary": "#42b72a",
+      "background": "#18191a",
+      "surface": "#242526",
+      "text": "#e4e6eb"
+    }
+  },
+  "features": {
+    "max_photos_per_post": 5,
+    "story_duration_hours": 24,
+    "max_video_duration_seconds": 60,
+    "max_friend_count": 1000,
+    "max_group_members": 100,
+    "min_group_members": 3
+  },
+  "upload": {
+    "image_services": [
+      "imgur",
+      "catbox",
+      "gofile",
+      "pixhost",
+      "0x0"
+    ],
+    "preferred_services": ["imgur", "catbox"],
+    "rate_limit_seconds": 1,
+    "max_retries": 3,
+    "retry_delay_seconds": 2,
+    "allowed_image_extensions": ["jpg", "jpeg", "png", "gif"],
+    "allowed_video_extensions": ["mp4", "webm", "ogg"],
+    "max_upload_size_bytes": 16777216
+  },
+  "firebase": {
+    "config_path": "static/js/firebase-config.js",
+    "auth_enabled": true,
+    "auth_methods": ["email", "google", "facebook"]
+  },
+  "messaging": {
+    "mqtt_enabled": true,
+    "websocket_fallback": true,
+    "read_receipts_enabled": true,
+    "typing_indicators_enabled": true,
+    "message_unsend_timeout_minutes": 10,
+    "emoji_shortcuts_enabled": true
+  },
+  "development": {
+    "debug_enabled": true,
+    "log_level": "DEBUG",
+    "auto_reload": true,
+    "local_storage_fallback": true,
+    "dummy_data_enabled": false
+  }
+}
