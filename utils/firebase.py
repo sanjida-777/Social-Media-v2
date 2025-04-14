@@ -34,15 +34,22 @@ def initialize_firebase():
                 firebase_cred_data = json.load(f)
                 
                 # Construct client config from service account
-                # This is just a basic configuration; in production, you might want more fields
-                firebase_config = {
-                    "apiKey": os.environ.get("FIREBASE_API_KEY", ""),
-                    "authDomain": f"{firebase_cred_data.get('project_id', '')}.firebaseapp.com",
-                    "projectId": firebase_cred_data.get("project_id", ""),
-                    "storageBucket": f"{firebase_cred_data.get('project_id', '')}.appspot.com",
-                    "messagingSenderId": firebase_cred_data.get("project_id", ""),
-                    "appId": os.environ.get("FIREBASE_APP_ID", "")
-                }
+                # For a complete social media app, we need a proper Firebase config
+                firebase_project_id = firebase_cred_data.get('project_id', '')
+                
+                # Extract project ID from the service account
+                if firebase_project_id:
+                    firebase_config = {
+                        # Required for client-side auth
+                        "apiKey": os.environ.get("FIREBASE_API_KEY", "AIzaSyCyOPPtgESjypcucodg6xD4mQCtpBQsqfc"),
+                        "authDomain": f"{firebase_project_id}.firebaseapp.com",
+                        "projectId": firebase_project_id,
+                        "storageBucket": f"{firebase_project_id}.appspot.com",
+                        "messagingSenderId": "240524622311",
+                        "appId": os.environ.get("FIREBASE_APP_ID", "1:240524622311:web:24bd8b1c6cb4e3d26c57ea")
+                    }
+                else:
+                    firebase_config = {}
         else:
             # If no file, check for environment variables
             logger.warning("Firebase credentials file not found, checking environment variables")
@@ -51,14 +58,19 @@ def initialize_firebase():
                 cred = credentials.Certificate(cred_json)
                 
                 # Also load the configuration for client-side
-                firebase_config = {
-                    "apiKey": os.environ.get("FIREBASE_API_KEY", ""),
-                    "authDomain": f"{cred_json.get('project_id', '')}.firebaseapp.com",
-                    "projectId": cred_json.get("project_id", ""),
-                    "storageBucket": f"{cred_json.get('project_id', '')}.appspot.com",
-                    "messagingSenderId": cred_json.get("project_id", ""),
-                    "appId": os.environ.get("FIREBASE_APP_ID", "")
-                }
+                firebase_project_id = cred_json.get('project_id', '')
+                
+                if firebase_project_id:
+                    firebase_config = {
+                        "apiKey": os.environ.get("FIREBASE_API_KEY", "AIzaSyCyOPPtgESjypcucodg6xD4mQCtpBQsqfc"),
+                        "authDomain": f"{firebase_project_id}.firebaseapp.com",
+                        "projectId": firebase_project_id,
+                        "storageBucket": f"{firebase_project_id}.appspot.com",
+                        "messagingSenderId": "240524622311",
+                        "appId": os.environ.get("FIREBASE_APP_ID", "1:240524622311:web:24bd8b1c6cb4e3d26c57ea")
+                    }
+                else:
+                    firebase_config = {}
             else:
                 # If no credentials available, use dummy for development
                 logger.warning("Firebase credentials not found in file or environment variables")
