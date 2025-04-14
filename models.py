@@ -46,8 +46,8 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(256))  # For local auth backup if needed
     bio = db.Column(db.String(500))
-    profile_pic = db.Column(db.String(200))
-    cover_pic = db.Column(db.String(200))
+    profile_pic = db.Column(db.String(200), default='/static/images/default-avatar.svg')
+    cover_pic = db.Column(db.String(200), default='/static/images/default-cover.svg')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_online = db.Column(db.DateTime, default=datetime.utcnow)
     is_active = db.Column(db.Boolean, default=True)

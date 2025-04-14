@@ -33,21 +33,89 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-@auth_bp.route('/login', methods=['GET'])
+@auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
     """User login page"""
     # If user is already logged in, redirect to home
     if g.user:
         return redirect(url_for('main.index'))
     
+    if request.method == 'POST':
+        email = request.form.get('email')
+        password = request.form.get('password')
+        
+        if not email or not password:
+            flash('Email and password are required.', 'danger')
+            return render_template('login.html')
+        
+        # Find user by email
+        user = User.query.filter_by(email=email).first()
+        
+        # Check if user exists and password is correct
+        if not user or not check_password_hash(user.password_hash, password):
+            flash('Invalid email or password.', 'danger')
+            return render_template('login.html')
+        
+        # Set user session
+        session['user_id'] = user.id
+        
+        # Update last online time
+        user.last_online = datetime.utcnow()
+        db.session.commit()
+        
+        # Redirect to home page or next URL
+        next_url = request.args.get('next')
+        if next_url and next_url.startswith('/'):
+            return redirect(next_url)
+        return redirect(url_for('main.index'))
+    
     return render_template('login.html')
 
-@auth_bp.route('/register', methods=['GET'])
+@auth_bp.route('/register', methods=['GET', 'POST'])
 def register():
     """User registration page"""
     # If user is already logged in, redirect to home
     if g.user:
         return redirect(url_for('main.index'))
+    
+    if request.method == 'POST':
+        username = request.form.get('username')
+        email = request.form.get('email')
+        password = request.form.get('password')
+        
+        if not username or not email or not password:
+            flash('All fields are required.', 'danger')
+            return render_template('register.html')
+        
+        # Check if user already exists
+        existing_user = User.query.filter(
+            (User.email == email) | (User.username == username)
+        ).first()
+        
+        if existing_user:
+            if existing_user.email == email:
+                flash('Email address already in use.', 'danger')
+            else:
+                flash('Username already taken.', 'danger')
+            return render_template('register.html')
+        
+        # Create new user
+        user = User(
+            email=email,
+            username=username,
+            password_hash=generate_password_hash(password),
+            created_at=datetime.utcnow()
+        )
+        
+        try:
+            db.session.add(user)
+            db.session.commit()
+            flash('Registration successful! Please log in.', 'success')
+            return redirect(url_for('auth.login'))
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Error registering user: {str(e)}")
+            flash('An error occurred during registration. Please try again.', 'danger')
     
     return render_template('register.html')
 

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1200px" height="300px" viewBox="0 0 1200 300" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>Default Cover Image</title>
+    <defs>
+        <linearGradient x1="0%" y1="0%" x2="100%" y2="100%" id="coverGradient">
+            <stop stop-color="#6c757d" offset="0%"></stop>
+            <stop stop-color="#343a40" offset="100%"></stop>
+        </linearGradient>
+        <pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse">
+            <rect width="30" height="30" fill="url(#coverGradient)"></rect>
+            <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#495057" stroke-width="1" opacity="0.2"></path>
+        </pattern>
+    </defs>
+    <g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <rect fill="url(#coverGradient)" x="0" y="0" width="1200" height="300"></rect>
+        <rect fill="url(#grid)" x="0" y="0" width="1200" height="300"></rect>
+        <text font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="#FFFFFF" text-anchor="middle" x="600" y="160">
+            Update your profile cover
+        </text>
+    </g>
+</svg>

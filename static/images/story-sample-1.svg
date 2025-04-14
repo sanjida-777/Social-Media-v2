@@ -3,17 +3,17 @@
     <title>Story Sample 1</title>
     <defs>
         <linearGradient x1="0%" y1="0%" x2="100%" y2="100%" id="storyGradient1">
-            <stop stop-color="#3A7BD5" offset="0%"></stop>
-            <stop stop-color="#3A6073" offset="100%"></stop>
+            <stop stop-color="#FF9500" offset="0%"></stop>
+            <stop stop-color="#FF5E3A" offset="100%"></stop>
         </linearGradient>
     </defs>
     <g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
         <rect fill="url(#storyGradient1)" x="0" y="0" width="120" height="200" rx="10"></rect>
         <text font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#FFFFFF" text-anchor="middle" x="60" y="105">
-            Connect with friends
+            Create your
         </text>
-        <text font-family="Arial, sans-serif" font-size="12" fill="#FFFFFF" text-anchor="middle" x="60" y="125">
-            to see their stories
+        <text font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#FFFFFF" text-anchor="middle" x="60" y="125">
+            first story
         </text>
     </g>
 </svg>
