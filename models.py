@@ -41,7 +41,7 @@ class FileUpload(db.Model):
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    firebase_uid = db.Column(db.String(128), unique=True, nullable=True)
+    firebase_uid = db.Column(db.String(128), unique=True, nullable=True, default=None)
     username = db.Column(db.String(64), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(256))  # For local auth backup if needed

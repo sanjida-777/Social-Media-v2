@@ -221,11 +221,12 @@ def api_register():
                 'message': 'Username already taken'
             }), 400
 
-    # Create new user
+    # Create new user for local authentication
     user = User(
         email=email,
         username=username,
         password_hash=generate_password_hash(password),
+        firebase_uid=None,  # Explicitly set to None for local auth
         created_at=datetime.utcnow()
     )
 
