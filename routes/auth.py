@@ -99,11 +99,12 @@ def register():
                 flash('Username already taken.', 'danger')
             return render_template('register.html')
 
-        # Create new user
+        # Create new user for local authentication
         user = User(
             email=email,
             username=username,
             password_hash=generate_password_hash(password),
+            firebase_uid=None,  # Explicitly set to None for local auth
             created_at=datetime.utcnow()
         )
 

@@ -16,7 +16,7 @@ class FileUpload(db.Model):
     upload_date = db.Column(db.DateTime, default=datetime.utcnow)
     last_check = db.Column(db.DateTime, default=datetime.utcnow)
     is_available = db.Column(db.Boolean, default=True)
-    
+
     def get_all_urls(self):
         """
         Returns a list of all URLs for this file
@@ -30,7 +30,7 @@ class FileUpload(db.Model):
             except:
                 pass
         return urls
-    
+
     def get_best_url(self):
         """
         Returns the best available URL for this file
@@ -51,15 +51,15 @@ class User(UserMixin, db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_online = db.Column(db.DateTime, default=datetime.utcnow)
     is_active = db.Column(db.Boolean, default=True)
-    
+
     # User's posts
     posts = db.relationship('Post', backref='author', lazy='dynamic')
-    
+
     # User's stories
     stories = db.relationship('Story', backref='author', lazy='dynamic')
-    
+
     # Friendship-related fields defined in Friend model relationships
-    
+
     # User's notification settings
     notification_settings = db.Column(db.String(500), default=json.dumps({
         'post_likes': True,
@@ -68,10 +68,10 @@ class User(UserMixin, db.Model):
         'messages': True,
         'story_views': True
     }))
-    
+
     def __repr__(self):
         return f'<User {self.username}>'
-    
+
     def serialize(self):
         return {
             'id': self.id,
@@ -92,14 +92,14 @@ class Friend(db.Model):
     relationship_score = db.Column(db.Float, default=0.0)  # Calculated score based on interactions
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
     # Define relationships
     user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('friend_requests_sent', lazy='dynamic'))
     friend = db.relationship('User', foreign_keys=[friend_id], backref=db.backref('friend_requests_received', lazy='dynamic'))
-    
+
     # Add unique constraint to prevent duplicate friendships
     __table_args__ = (db.UniqueConstraint('user_id', 'friend_id', name='unique_friendship'),)
-    
+
     def __repr__(self):
         return f'<Friend {self.user_id} -> {self.friend_id} ({self.status})>'
 
@@ -108,14 +108,14 @@ class Follower(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     follower_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
+
     # Define relationships
     user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('followers', lazy='dynamic'))
     follower = db.relationship('User', foreign_keys=[follower_id], backref=db.backref('following', lazy='dynamic'))
-    
+
     # Add unique constraint to prevent duplicate following
     __table_args__ = (db.UniqueConstraint('user_id', 'follower_id', name='unique_follower'),)
-    
+
     def __repr__(self):
         return f'<Follower {self.follower_id} -> {self.user_id}>'
 
@@ -125,17 +125,17 @@ class Post(db.Model):
     content = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
     # Media related to the post (handled via the PostMedia model)
     media = db.relationship('PostMedia', backref='post', lazy='dynamic', cascade='all, delete-orphan')
-    
+
     # Post engagement metrics
     likes = db.relationship('PostLike', backref='post', lazy='dynamic', cascade='all, delete-orphan')
     comments = db.relationship('Comment', backref='post', lazy='dynamic', cascade='all, delete-orphan')
-    
+
     def __repr__(self):
         return f'<Post {self.id} by {self.user_id}>'
-    
+
     def serialize(self):
         return {
             'id': self.id,
@@ -156,10 +156,10 @@ class PostMedia(db.Model):
     media_type = db.Column(db.String(20), nullable=False)  # image, video
     media_url = db.Column(db.String(255), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
+
     def __repr__(self):
         return f'<PostMedia {self.id} - {self.media_type}>'
-    
+
     def serialize(self):
         return {
             'id': self.id,
@@ -174,13 +174,13 @@ class PostLike(db.Model):
     post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
+
     # Define relationships
     user = db.relationship('User', backref=db.backref('post_likes', lazy='dynamic'))
-    
+
     # Add unique constraint to prevent duplicate likes
     __table_args__ = (db.UniqueConstraint('post_id', 'user_id', name='unique_post_like'),)
-    
+
     def __repr__(self):
         return f'<PostLike {self.user_id} -> {self.post_id}>'
 
@@ -191,16 +191,16 @@ class Comment(db.Model):
     content = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
     # Define relationships
     user = db.relationship('User', backref=db.backref('comments', lazy='dynamic'))
-    
+
     # Comment likes
     likes = db.relationship('CommentLike', backref='comment', lazy='dynamic', cascade='all, delete-orphan')
-    
+
     def __repr__(self):
         return f'<Comment {self.id} on {self.post_id} by {self.user_id}>'
-    
+
     def serialize(self):
         return {
             'id': self.id,
@@ -219,13 +219,13 @@ class CommentLike(db.Model):
     comment_id = db.Column(db.Integer, db.ForeignKey('comment.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
+
     # Define relationships
     user = db.relationship('User', backref=db.backref('comment_likes', lazy='dynamic'))
-    
+
     # Add unique constraint to prevent duplicate likes
     __table_args__ = (db.UniqueConstraint('comment_id', 'user_id', name='unique_comment_like'),)
-    
+
     def __repr__(self):
         return f'<CommentLike {self.user_id} -> {self.comment_id}>'
 
@@ -237,13 +237,13 @@ class Story(db.Model):
     media_url = db.Column(db.String(255))  # For image or video stories
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     expires_at = db.Column(db.DateTime)  # 24 hours after creation
-    
+
     # Story views
     views = db.relationship('StoryView', backref='story', lazy='dynamic', cascade='all, delete-orphan')
-    
+
     def __repr__(self):
         return f'<Story {self.id} by {self.user_id} ({self.story_type})>'
-    
+
     def serialize(self):
         return {
             'id': self.id,
@@ -263,13 +263,13 @@ class StoryView(db.Model):
     story_id = db.Column(db.Integer, db.ForeignKey('story.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
+
     # Define relationships
     user = db.relationship('User', backref=db.backref('story_views', lazy='dynamic'))
-    
+
     # Add unique constraint to prevent duplicate views
     __table_args__ = (db.UniqueConstraint('story_id', 'user_id', name='unique_story_view'),)
-    
+
     def __repr__(self):
         return f'<StoryView {self.user_id} -> {self.story_id}>'
 
@@ -280,15 +280,15 @@ class ChatGroup(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     is_group = db.Column(db.Boolean, default=False)  # False for direct messages
-    
+
     # Define relationships
     creator = db.relationship('User', backref=db.backref('created_chats', lazy='dynamic'))
     members = db.relationship('ChatMember', backref='chat_group', lazy='dynamic', cascade='all, delete-orphan')
     messages = db.relationship('ChatMessage', backref='chat_group', lazy='dynamic', cascade='all, delete-orphan')
-    
+
     def __repr__(self):
         return f'<ChatGroup {self.id} - {self.name}>'
-    
+
     def serialize(self):
         return {
             'id': self.id,
@@ -308,16 +308,16 @@ class ChatMember(db.Model):
     role = db.Column(db.String(20), default='member')  # admin, member
     joined_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_read = db.Column(db.DateTime)
-    
+
     # Define relationships
     user = db.relationship('User', backref=db.backref('chat_memberships', lazy='dynamic'))
-    
+
     # Add unique constraint to prevent duplicate memberships
     __table_args__ = (db.UniqueConstraint('chat_id', 'user_id', name='unique_chat_member'),)
-    
+
     def __repr__(self):
         return f'<ChatMember {self.user_id} in {self.chat_id}>'
-    
+
     def serialize(self):
         return {
             'id': self.id,
@@ -340,14 +340,14 @@ class ChatMessage(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     is_deleted = db.Column(db.Boolean, default=False)
-    
+
     # Define relationships
     user = db.relationship('User', backref=db.backref('chat_messages', lazy='dynamic'))
     read_receipts = db.relationship('MessageReadReceipt', backref='message', lazy='dynamic', cascade='all, delete-orphan')
-    
+
     def __repr__(self):
         return f'<ChatMessage {self.id} in {self.chat_id} by {self.user_id}>'
-    
+
     def serialize(self):
         return {
             'id': self.id,
@@ -369,16 +369,16 @@ class MessageReadReceipt(db.Model):
     message_id = db.Column(db.Integer, db.ForeignKey('chat_message.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     read_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
+
     # Define relationships
     user = db.relationship('User', backref=db.backref('message_reads', lazy='dynamic'))
-    
+
     # Add unique constraint to prevent duplicate read receipts
     __table_args__ = (db.UniqueConstraint('message_id', 'user_id', name='unique_message_read'),)
-    
+
     def __repr__(self):
         return f'<MessageReadReceipt {self.message_id} read by {self.user_id}>'
-    
+
     def serialize(self):
         return {
             'id': self.id,
@@ -397,14 +397,14 @@ class Notification(db.Model):
     content = db.Column(db.Text)
     is_read = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
+
     # Define relationships
     user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('notifications', lazy='dynamic'))
     sender = db.relationship('User', foreign_keys=[sender_id], backref=db.backref('sent_notifications', lazy='dynamic'))
-    
+
     def __repr__(self):
         return f'<Notification {self.id} to {self.user_id} type {self.notification_type}>'
-    
+
     def serialize(self):
         return {
             'id': self.id,
@@ -427,14 +427,14 @@ class UserInteraction(db.Model):
     interaction_type = db.Column(db.String(50), nullable=False)  # profile_visit, message, like, comment
     interaction_count = db.Column(db.Integer, default=1)
     last_interaction = db.Column(db.DateTime, default=datetime.utcnow)
-    
+
     # Define relationships
     user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('interactions', lazy='dynamic'))
     target = db.relationship('User', foreign_keys=[target_id], backref=db.backref('received_interactions', lazy='dynamic'))
-    
+
     # Add unique constraint to prevent duplicate interaction records
     __table_args__ = (db.UniqueConstraint('user_id', 'target_id', 'interaction_type', name='unique_interaction'),)
-    
+
     def __repr__(self):
         return f'<UserInteraction {self.user_id} -> {self.target_id} ({self.interaction_type})>'
 
@@ -443,17 +443,17 @@ class UserInteraction(db.Model):
 @event.listens_for(UserInteraction, 'after_update')
 def update_friendship_score(mapper, connection, target):
     from utils.friend_algorithm import calculate_relationship_score
-    
+
     # Get the Friend record if it exists
     friendship = Friend.query.filter(
         (Friend.user_id == target.user_id) & (Friend.friend_id == target.target_id) |
         (Friend.user_id == target.target_id) & (Friend.friend_id == target.user_id)
     ).first()
-    
+
     if friendship and friendship.status == 'accepted':
         # Calculate the new relationship score
         new_score = calculate_relationship_score(target.user_id, target.target_id)
-        
+
         # Update the relationship score
         friendship.relationship_score = new_score
         db.session.commit()
