@@ -41,6 +41,7 @@ class FileUpload(db.Model):
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    uid = db.Column(db.String(10), unique=True, nullable=False, index=True)  # 10-digit unique identifier
     firebase_uid = db.Column(db.String(128), unique=True, nullable=True, default=None)
     username = db.Column(db.String(64), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
@@ -75,6 +76,7 @@ class User(UserMixin, db.Model):
     def serialize(self):
         return {
             'id': self.id,
+            'uid': self.uid,
             'username': self.username,
             'email': self.email,
             'bio': self.bio,

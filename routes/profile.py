@@ -21,8 +21,8 @@ def view_profile(username=None):
     uid = request.args.get('uid')
 
     if uid:
-        # If uid is provided, find user by ID
-        user = User.query.get_or_404(uid)
+        # If uid is provided, find user by UID (10-digit identifier)
+        user = User.query.filter_by(uid=uid).first_or_404()
     elif username:
         # If username is provided in the URL, find user by username
         user = User.query.filter_by(username=username).first_or_404()

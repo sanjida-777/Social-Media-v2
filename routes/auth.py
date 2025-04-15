@@ -289,8 +289,12 @@ def api_register():
                 'message': 'Username already taken'
             }), 400
 
-    # Create new user with secure password hashing
+    # Import the UID generator
+    from utils.uid_generator import generate_unique_uid
+
+    # Create new user with secure password hashing and unique UID
     new_user = User(
+        uid=generate_unique_uid(),
         username=username,
         email=email,
         password_hash=generate_password_hash(password, method='pbkdf2:sha256:50000'),
