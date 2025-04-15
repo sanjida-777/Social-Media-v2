@@ -33,7 +33,7 @@ A modern social media web application built with Flask, featuring user authentic
 
 1. Clone the repository:
    ```
-   git clone https://github.com/yourusername/social-media-app.git
+   git clone https://github.com/sanjida-777/Social-Media-v2.git
    cd social-media-app
    ```
 
