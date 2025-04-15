@@ -475,7 +475,7 @@ const profileModule = (function() {
   function addFriend(username, button) {
     setButtonLoading(button);
 
-    fetch(`/api/friend_request/${username}`, {
+    fetch(`/profile/api/friend/${username}/request`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -663,7 +663,7 @@ const profileModule = (function() {
   function followUser(username, button) {
     setButtonLoading(button);
 
-    fetch(`/api/follow/${username}`, {
+    fetch(`/profile/api/follow/${username}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -700,7 +700,7 @@ const profileModule = (function() {
   function unfollowUser(username, button) {
     setButtonLoading(button);
 
-    fetch(`/api/unfollow/${username}`, {
+    fetch(`/profile/api/unfollow/${username}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
