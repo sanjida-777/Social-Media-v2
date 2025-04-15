@@ -378,27 +378,52 @@ body {
   padding: 0.25rem 0.5rem;
 }
 
-.friend-actions .dropdown-menu {
+.dropdown-menu {
   min-width: 200px;
   background-color: var(--surface-bg);
   border: 1px solid var(--divider-color);
 }
 
-.friend-actions .dropdown-item {
+.dropdown-item {
   color: var(--text-color);
   padding: 0.5rem 1rem;
 }
 
-.friend-actions .dropdown-item:hover {
+.dropdown-item:hover {
   background-color: var(--hover-bg);
 }
 
-.friend-actions .dropdown-item.text-danger:hover {
+.dropdown-item.text-danger:hover {
   background-color: rgba(255, 69, 58, 0.2);
 }
 
-.friend-actions .dropdown-divider {
+.dropdown-divider {
   border-top: 1px solid var(--divider-color);
+}
+
+/* Friend menu button */
+.friend-card .dropdown .btn,
+.card-body .dropdown .btn {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+}
+
+.friend-card .dropdown .btn:hover,
+.card-body .dropdown .btn:hover {
+  background-color: #166fe5;
+}
+
+.friend-card .dropdown .btn i,
+.card-body .dropdown .btn i {
+  font-size: 1.2rem;
 }
 
 @media (max-width: 576px) {

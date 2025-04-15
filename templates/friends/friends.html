@@ -49,7 +49,7 @@
                                 <small class="text-muted">{% if suggestion.mutual_friends > 0 %}<strong>{{ suggestion.mutual_friends }} mutual friend{% if suggestion.mutual_friends > 1 %}s{% endif %}</strong>{% else %}No mutual friends{% endif %}</small>
                             </div>
                             <div class="dropdown">
-                                <button class="btn btn-sm btn-outline-primary" type="button" id="suggestionMenu{{ suggestion.id }}" data-bs-toggle="dropdown" aria-expanded="false">
+                                <button class="btn btn-sm btn-primary" type="button" id="suggestionMenu{{ suggestion.id }}" data-bs-toggle="dropdown" aria-expanded="false">
                                     <i class="bi bi-three-dots-vertical"></i>
                                 </button>
                                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="suggestionMenu{{ suggestion.id }}">
@@ -86,33 +86,27 @@
                                     <div class="card-body">
                                         <div class="d-flex align-items-center">
                                             <img src="{{ friend.profile_pic or url_for('static', filename='images/default-avatar.svg') }}" alt="{{ friend.username }}" class="rounded-circle me-3" width="60" height="60">
-                                            <div>
+                                            <div class="flex-grow-1">
                                                 <h5 class="mb-1">{{ friend.username }}</h5>
                                                 <p class="text-muted mb-0 small">{{ 'Online' if friend.is_active else 'Last seen ' + friend.last_online|humanize }}</p>
                                             </div>
-                                        </div>
-                                    </div>
-                                    <div class="card-footer bg-transparent">
-                                        <div class="d-flex justify-content-between friend-actions">
-                                            <a href="{{ url_for('auth.profile', username=friend.username) }}" class="btn btn-sm btn-outline-primary">
-                                                <i class="bi bi-person"></i> Profile
-                                            </a>
-                                            <a href="{{ url_for('auth.messages', username=friend.username) }}" class="btn btn-sm btn-outline-success">
-                                                <i class="bi bi-chat"></i> Message
-                                            </a>
                                             <div class="dropdown">
-                                                <button class="btn btn-sm btn-outline-secondary" type="button" id="friendMenu{{ friend.id }}" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <button class="btn btn-sm btn-outline-primary" type="button" id="friendMenu{{ friend.id }}" data-bs-toggle="dropdown" aria-expanded="false">
                                                     <i class="bi bi-three-dots-vertical"></i>
                                                 </button>
                                                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="friendMenu{{ friend.id }}">
                                                     <li><a class="dropdown-item" href="{{ url_for('auth.profile', username=friend.username) }}"><i class="bi bi-person me-2"></i>View Profile</a></li>
                                                     <li><a class="dropdown-item" href="{{ url_for('auth.messages', username=friend.username) }}"><i class="bi bi-chat me-2"></i>Send Message</a></li>
+                                                    <li><a class="dropdown-item" href="#"><i class="bi bi-bell me-2"></i>Notifications</a></li>
+                                                    <li><a class="dropdown-item" href="#"><i class="bi bi-eye-slash me-2"></i>Hide Posts</a></li>
                                                     <li><hr class="dropdown-divider"></li>
+                                                    <li><a class="dropdown-item" href="#"><i class="bi bi-person-x me-2"></i>Unfollow</a></li>
                                                     <li><a class="dropdown-item text-danger" href="#" onclick="unfriend({{ friend.id }}); return false;"><i class="bi bi-person-dash me-2"></i>Remove Friend</a></li>
                                                 </ul>
                                             </div>
                                         </div>
                                     </div>
+
                                 </div>
                             </div>
                             {% endfor %}
