@@ -25,25 +25,25 @@ const profileModule = (function() {
     const uidParam = urlParams.get('uid');
 
     if (uidParam) {
-      // If uid is in the query parameters, use it
+      // If uid (10-digit identifier) is in the query parameters, use it
       profileUsername = null;
-      profileUserId = uidParam;
-      loadProfileDataById(profileUserId);
+      profileUid = uidParam;
+      loadProfileDataByUid(profileUid);
     } else if ((pathParts[1] === 'profile' || (pathParts[1] === 'auth' && pathParts[2] === 'profile')) && pathParts[pathParts.length-1]) {
       // If username is in the URL path, use it
       profileUsername = pathParts[pathParts.length-1];
-      profileUserId = null;
+      profileUid = null;
     }
 
     if (postsContainer) {
       if (profileUsername) {
         // Load profile data by username
         loadProfileData(profileUsername);
-      } else if (profileUserId) {
+      } else if (profileUid) {
         // Already loaded in the URL parsing section
       } else {
         // No profile identifier found
-        console.error('No profile username or ID found');
+        console.error('No profile username or UID found');
         return;
       }
 
@@ -159,12 +159,12 @@ const profileModule = (function() {
       });
   }
 
-  // Load profile data by user ID
-  function loadProfileDataById(userId, page = 1) {
-    if (!userId) return;
+  // Load profile data by user UID (10-digit identifier)
+  function loadProfileDataByUid(uid, page = 1) {
+    if (!uid) return;
 
     isLoading = true;
-    profileUserId = userId;
+    profileUid = uid;
 
     // Show loading state
     if (page === 1 && postsContainer) {
@@ -186,7 +186,7 @@ const profileModule = (function() {
       `);
     }
 
-    fetch(`/api/profile?uid=${userId}&page=${page}`)
+    fetch(`/api/profile?uid=${uid}&page=${page}`)
       .then(response => response.json())
       .then(data => {
         isLoading = false;
@@ -250,8 +250,8 @@ const profileModule = (function() {
 
     if (profileUsername) {
       loadProfileData(profileUsername, currentPage + 1);
-    } else if (profileUserId) {
-      loadProfileDataById(profileUserId, currentPage + 1);
+    } else if (profileUid) {
+      loadProfileDataByUid(profileUid, currentPage + 1);
     }
   }
 
@@ -583,7 +583,7 @@ const profileModule = (function() {
   function addFriend(username, button) {
     setButtonLoading(button);
 
-    fetch(`/profile/api/friend/${username}/request`, {
+    fetch(`/api/friend_request/${username}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -621,7 +621,7 @@ const profileModule = (function() {
 
     setButtonLoading(button);
 
-    fetch(`/profile/api/friend/${username}/remove`, {
+    fetch(`/api/friend/${username}/remove`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -655,7 +655,7 @@ const profileModule = (function() {
   function cancelRequest(username, button) {
     setButtonLoading(button);
 
-    fetch(`/profile/api/friend/${username}/cancel`, {
+    fetch(`/api/friend_request/${username}/cancel`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -689,7 +689,7 @@ const profileModule = (function() {
   function acceptRequest(username, button) {
     setButtonLoading(button);
 
-    fetch(`/profile/api/friend/${username}/accept`, {
+    fetch(`/api/friend_request/${username}/accept`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -730,7 +730,7 @@ const profileModule = (function() {
   function declineRequest(username, button) {
     setButtonLoading(button);
 
-    fetch(`/profile/api/friend/${username}/decline`, {
+    fetch(`/api/friend_request/${username}/decline`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -771,7 +771,7 @@ const profileModule = (function() {
   function followUser(username, button) {
     setButtonLoading(button);
 
-    fetch(`/profile/api/follow/${username}`, {
+    fetch(`/api/follow/${username}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -808,7 +808,7 @@ const profileModule = (function() {
   function unfollowUser(username, button) {
     setButtonLoading(button);
 
-    fetch(`/profile/api/unfollow/${username}`, {
+    fetch(`/api/unfollow/${username}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1186,7 +1186,7 @@ const profileModule = (function() {
   // Public methods
   return {
     loadProfileData,
-    loadProfileDataById,
+    loadProfileDataByUid,
     loadMorePosts
   };
 })();

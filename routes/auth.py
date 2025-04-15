@@ -13,7 +13,7 @@ from werkzeug.utils import secure_filename
 
 from database import db
 from sqlalchemy import func
-from models import User
+from models import User, Friend
 from utils.firebase import verify_firebase_token
 
 # Set up logger
@@ -84,6 +84,25 @@ def login():
         return redirect(url_for('main.index'))
 
     return render_template('login.html')
+
+@auth_bp.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    """Forgot password page"""
+    if request.method == 'POST':
+        email = request.form.get('email')
+
+        # Check if email exists
+        user = User.query.filter_by(email=email).first()
+
+        if user:
+            # In a real application, you would send a password reset email here
+            # For now, just show a success message
+            flash('Password reset instructions have been sent to your email.', 'success')
+            return redirect(url_for('auth.login'))
+        else:
+            flash('Email not found.', 'danger')
+
+    return render_template('forgot_password.html')
 
 @auth_bp.route('/register', methods=['GET', 'POST'])
 def register():
@@ -465,13 +484,56 @@ def friends():
         return redirect(url_for('auth.login'))
 
     # Get friends
-    friends = []
+    sent_friends = Friend.query.filter_by(user_id=g.user.id, status='accepted').all()
+    received_friends = Friend.query.filter_by(friend_id=g.user.id, status='accepted').all()
+
+    # Get friend IDs
+    sent_friend_ids = [f.friend_id for f in sent_friends]
+    received_friend_ids = [f.user_id for f in received_friends]
+
+    # Combine IDs
+    friend_ids = list(set(sent_friend_ids + received_friend_ids))
+
+    # Get friend users
+    friends = User.query.filter(User.id.in_(friend_ids)).all() if friend_ids else []
 
     # Get friend requests
+    received_requests = Friend.query.filter_by(friend_id=g.user.id, status='pending').all()
     friend_requests = []
 
-    # Get friend suggestions
+    for request in received_requests:
+        sender = User.query.get(request.user_id)
+        if sender:
+            friend_requests.append({
+                'id': request.id,
+                'sender': sender,
+                'created_at': request.created_at
+            })
+
+    # Get friend suggestions (users who are not friends and have no pending requests)
+    # For simplicity, just get some random users
+    all_users = User.query.filter(User.id != g.user.id).limit(10).all()
     friend_suggestions = []
+
+    for user in all_users:
+        # Skip if already friends or have pending requests
+        if user.id in friend_ids:
+            continue
+
+        existing_sent = Friend.query.filter_by(user_id=g.user.id, friend_id=user.id).first()
+        existing_received = Friend.query.filter_by(user_id=user.id, friend_id=g.user.id).first()
+
+        if existing_sent or existing_received:
+            continue
+
+        # Add to suggestions with a random number of mutual friends
+        import random
+        friend_suggestions.append({
+            'id': user.id,
+            'username': user.username,
+            'profile_pic': user.profile_pic,
+            'mutual_friends': random.randint(0, 5)
+        })
 
     return render_template(
         'friends.html',

@@ -41,7 +41,7 @@ class FileUpload(db.Model):
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    uid = db.Column(db.String(10), unique=True, nullable=False, index=True)  # 10-digit unique identifier
+    uid = db.Column(db.String(10), unique=True, nullable=True, index=True)  # 10-digit unique identifier (nullable during migration)
     firebase_uid = db.Column(db.String(128), unique=True, nullable=True, default=None)
     username = db.Column(db.String(64), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)

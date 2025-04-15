@@ -529,6 +529,79 @@ def decline_friend_request(request_id):
         'message': 'Friend request declined'
     })
 
+@profile_bp.route('/api/friend_request/<username>/cancel', methods=['POST'])
+@login_required
+def cancel_friend_request(username):
+    user = User.query.filter_by(username=username).first_or_404()
+
+    # Find the friend request
+    friend_request = Friend.query.filter_by(user_id=g.user.id, friend_id=user.id, status='pending').first()
+
+    if not friend_request:
+        return jsonify({'error': 'No pending friend request found'}), 404
+
+    # Delete the friend request
+    db.session.delete(friend_request)
+    db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'message': 'Friend request cancelled'
+    })
+
+@profile_bp.route('/api/friend_request/<username>/accept', methods=['POST'])
+@login_required
+def accept_friend_request_by_username(username):
+    user = User.query.filter_by(username=username).first_or_404()
+
+    # Find the friend request
+    friend_request = Friend.query.filter_by(user_id=user.id, friend_id=g.user.id, status='pending').first()
+
+    if not friend_request:
+        return jsonify({'error': 'No pending friend request found'}), 404
+
+    # Accept the request
+    friend_request.status = 'accepted'
+    db.session.commit()
+
+    # Create notification for the other user
+    notification = Notification(
+        user_id=user.id,
+        notification_type='friend_accepted',
+        sender_id=g.user.id,
+        reference_id=None,
+        content=f"{g.user.username} accepted your friend request"
+    )
+    db.session.add(notification)
+    db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'status': 'accepted',
+        'message': 'Friend request accepted'
+    })
+
+@profile_bp.route('/api/friend_request/<username>/decline', methods=['POST'])
+@login_required
+def decline_friend_request_by_username(username):
+    user = User.query.filter_by(username=username).first_or_404()
+
+    # Find the friend request
+    friend_request = Friend.query.filter_by(user_id=user.id, friend_id=g.user.id, status='pending').first()
+
+    if not friend_request:
+        return jsonify({'error': 'No pending friend request found'}), 404
+
+    # Decline the request
+    friend_request.status = 'declined'
+    db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'status': 'declined',
+        'message': 'Friend request declined'
+    })
+
 @profile_bp.route('/api/friend/<username>/remove', methods=['POST'])
 @login_required
 def remove_friend(username):
@@ -610,6 +683,22 @@ def unfollow_user(username):
     return jsonify({
         'success': True,
         'message': 'Unfollowed user'
+    })
+
+@profile_bp.route('/api/user/<int:user_id>', methods=['GET'])
+def get_user_by_id(user_id):
+    """Get user information by ID"""
+    user = User.query.get(user_id)
+
+    if not user:
+        return jsonify({
+            'success': False,
+            'error': 'User not found'
+        }), 404
+
+    return jsonify({
+        'success': True,
+        'user': user.serialize()
     })
 
 # Blueprint is registered in create_app.py

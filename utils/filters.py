@@ -11,12 +11,12 @@ def timeago(value):
     """Format a datetime object to a relative time string (e.g., "2 hours ago")."""
     if value is None:
         return ""
-    
+
     now = datetime.now()
     diff = now - value
-    
+
     seconds = diff.total_seconds()
-    
+
     if seconds < 60:
         return "just now"
     elif seconds < 3600:
@@ -43,3 +43,4 @@ def register_filters(app):
     """Register custom filters with the Flask app."""
     app.jinja_env.filters['strftime'] = format_datetime
     app.jinja_env.filters['timeago'] = timeago
+    app.jinja_env.filters['humanize'] = timeago  # Add humanize as an alias for timeago
