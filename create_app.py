@@ -80,6 +80,7 @@ def create_app():
     from routes.story import story_bp
     from routes.notifications import notifications_bp
     from routes.api import api_bp
+    from routes.profile import profile_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(feed_bp)
@@ -87,6 +88,7 @@ def create_app():
     app.register_blueprint(story_bp)
     app.register_blueprint(notifications_bp)
     app.register_blueprint(api_bp)
+    app.register_blueprint(profile_bp)
 
     # Import Firebase utilities
     from utils.firebase import get_firebase_config_for_client
