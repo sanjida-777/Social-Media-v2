@@ -14,9 +14,24 @@ logger = logging.getLogger(__name__)
 # Create Blueprint
 profile_bp = Blueprint('profile', __name__)
 
-@profile_bp.route('/profile/<username>')
-def view_profile(username):
-    user = User.query.filter_by(username=username).first_or_404()
+@profile_bp.route('/profile', methods=['GET'])
+@profile_bp.route('/profile/<username>', methods=['GET'])
+def view_profile(username=None):
+    # Check if uid is provided as a query parameter
+    uid = request.args.get('uid')
+
+    if uid:
+        # If uid is provided, find user by ID
+        user = User.query.get_or_404(uid)
+    elif username:
+        # If username is provided in the URL, find user by username
+        user = User.query.filter_by(username=username).first_or_404()
+    else:
+        # If neither uid nor username is provided, redirect to current user's profile
+        if g.user:
+            return redirect(url_for('profile.view_profile', username=g.user.username))
+        else:
+            return redirect(url_for('auth.login'))
 
     # If the viewer is logged in, record the profile visit
     if g.user and g.user.id != user.id:
@@ -62,7 +77,52 @@ def view_profile(username):
         page=page, per_page=per_page, error_out=False
     )
 
-    return render_template('profile.html', user=user, posts=posts, friendship_status=friendship_status)
+    # Get friend and follower counts
+    friend_count = Friend.query.filter(
+        (Friend.user_id == user.id) | (Friend.friend_id == user.id),
+        Friend.status == 'accepted'
+    ).count()
+
+    follower_count = Follower.query.filter_by(user_id=user.id).count()
+    following_count = Follower.query.filter_by(follower_id=user.id).count()
+
+    # Check if the current user is following this user
+    is_following = False
+    if g.user:
+        is_following = Follower.query.filter_by(follower_id=g.user.id, user_id=user.id).first() is not None
+
+    # Get total posts count
+    total_posts = Post.query.filter_by(user_id=user.id).count()
+
+    # Check if this is an API request
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.args.get('format') == 'json':
+        # Return JSON response for API requests
+        return jsonify({
+            'user': user.serialize(),
+            'friendship_status': friendship_status,
+            'is_following': is_following,
+            'friend_count': friend_count,
+            'follower_count': follower_count,
+            'following_count': following_count,
+            'posts': [post.item.serialize() for post in posts.items],
+            'pagination': {
+                'current_page': page,
+                'per_page': per_page,
+                'total_posts': total_posts,
+                'total_pages': (total_posts + per_page - 1) // per_page
+            }
+        })
+    else:
+        # Render HTML template for regular requests
+        return render_template(
+            'profile.html',
+            profile_user=user,
+            posts=posts,
+            friends=[],  # We'll load these via AJAX
+            is_friend=(friendship_status == 'accepted'),
+            friend_request_sent=(friendship_status == 'pending'),
+            friend_request_received=(friendship_status == 'received')
+        )
 
 @profile_bp.route('/api/profile/<username>')
 def get_profile(username):
@@ -104,21 +164,35 @@ def get_profile(username):
     follower_count = Follower.query.filter_by(user_id=user.id).count()
     following_count = Follower.query.filter_by(follower_id=user.id).count()
 
-    return jsonify({
-        'user': user.serialize(),
-        'friendship_status': friendship_status,
-        'is_following': is_following,
-        'friend_count': friend_count,
-        'follower_count': follower_count,
-        'following_count': following_count,
-        'posts': [post.serialize() for post in posts],
-        'pagination': {
-            'current_page': page,
-            'per_page': per_page,
-            'total_posts': total_posts,
-            'total_pages': (total_posts + per_page - 1) // per_page
-        }
-    })
+    # Check if this is an API request
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.args.get('format') == 'json':
+        # Return JSON response for API requests
+        return jsonify({
+            'user': user.serialize(),
+            'friendship_status': friendship_status,
+            'is_following': is_following,
+            'friend_count': friend_count,
+            'follower_count': follower_count,
+            'following_count': following_count,
+            'posts': [post.serialize() for post in posts],
+            'pagination': {
+                'current_page': page,
+                'per_page': per_page,
+                'total_posts': total_posts,
+                'total_pages': (total_posts + per_page - 1) // per_page
+            }
+        })
+    else:
+        # Render HTML template for regular requests
+        return render_template(
+            'profile.html',
+            profile_user=user,
+            posts=posts,
+            friends=[],  # We'll load these via AJAX
+            is_friend=(friendship_status == 'accepted'),
+            friend_request_sent=(friendship_status == 'pending'),
+            friend_request_received=(friendship_status == 'received')
+        )
 
 @profile_bp.route('/profile/edit', methods=['GET', 'POST'])
 @login_required

@@ -8,16 +8,30 @@ logger = logging.getLogger(__name__)
 # Create blueprint
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
+@api_bp.route('/profile', methods=['GET'])
 @api_bp.route('/profile/<username>', methods=['GET'])
-def get_profile(username):
-    """Get profile data for a user"""
+def get_profile(username=None):
+    """Get profile data for a user by username or user ID"""
     try:
         # Get page parameter for pagination
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 10, type=int)
 
-        # Get user
-        user = User.query.filter_by(username=username).first()
+        # Get user by ID or username
+        uid = request.args.get('uid')
+
+        if uid:
+            # Get user by ID
+            user = User.query.get(uid)
+        elif username:
+            # Get user by username
+            user = User.query.filter_by(username=username).first()
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'No username or user ID provided'
+            }), 400
+
         if not user:
             return jsonify({
                 'success': False,

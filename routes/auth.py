@@ -343,10 +343,25 @@ def api_logout():
             'message': 'No active session found'
         }), 401
 
-@auth_bp.route('/profile/<username>')
-def profile(username):
+@auth_bp.route('/profile', methods=['GET'])
+@auth_bp.route('/profile/<username>', methods=['GET'])
+def profile(username=None):
     """User profile page"""
-    user = User.query.filter_by(username=username).first_or_404()
+    # Check if uid is provided as a query parameter
+    uid = request.args.get('uid')
+
+    if uid:
+        # If uid is provided, find user by ID
+        user = User.query.get_or_404(uid)
+    elif username:
+        # If username is provided in the URL, find user by username
+        user = User.query.filter_by(username=username).first_or_404()
+    else:
+        # If neither uid nor username is provided, redirect to current user's profile
+        if g.user:
+            return redirect(url_for('auth.profile', username=g.user.username))
+        else:
+            return redirect(url_for('auth.login'))
 
     # Get user's posts
     posts = []

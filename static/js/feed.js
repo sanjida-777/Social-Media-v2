@@ -619,6 +619,52 @@ const feedModule = (function() {
     });
   }
 
+  // Get current user ID
+  function getCurrentUserId() {
+    const userIdEl = document.getElementById('current-user-id');
+    return userIdEl ? userIdEl.value : null;
+  }
+
+  // Lazy load images
+  function lazyLoadImages() {
+    // Check if IntersectionObserver is supported
+    if ('IntersectionObserver' in window) {
+      const imageObserver = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const img = entry.target;
+            const src = img.getAttribute('data-src');
+
+            if (src) {
+              img.src = src;
+              img.removeAttribute('data-src');
+              img.classList.remove('lazy-load');
+            }
+
+            observer.unobserve(img);
+          }
+        });
+      });
+
+      // Target all images with data-src attribute
+      const lazyImages = document.querySelectorAll('img[data-src]');
+      lazyImages.forEach(img => {
+        imageObserver.observe(img);
+      });
+    } else {
+      // Fallback for browsers that don't support IntersectionObserver
+      const lazyImages = document.querySelectorAll('img[data-src]');
+      lazyImages.forEach(img => {
+        const src = img.getAttribute('data-src');
+        if (src) {
+          img.src = src;
+          img.removeAttribute('data-src');
+          img.classList.remove('lazy-load');
+        }
+      });
+    }
+  }
+
   // Initialize module when document is ready
   document.addEventListener('DOMContentLoaded', init);
 

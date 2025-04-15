@@ -19,15 +19,33 @@ const profileModule = (function() {
     photosContainer = document.getElementById('photos-container');
     friendsContainer = document.getElementById('friends-container');
 
-    // Get profile username from URL
+    // Get profile username or uid from URL
     const pathParts = window.location.pathname.split('/');
-    if ((pathParts[1] === 'profile' || pathParts[1] === 'auth' && pathParts[2] === 'profile') && pathParts[pathParts.length-1]) {
+    const urlParams = new URLSearchParams(window.location.search);
+    const uidParam = urlParams.get('uid');
+
+    if (uidParam) {
+      // If uid is in the query parameters, use it
+      profileUsername = null;
+      profileUserId = uidParam;
+      loadProfileDataById(profileUserId);
+    } else if ((pathParts[1] === 'profile' || (pathParts[1] === 'auth' && pathParts[2] === 'profile')) && pathParts[pathParts.length-1]) {
+      // If username is in the URL path, use it
       profileUsername = pathParts[pathParts.length-1];
+      profileUserId = null;
     }
 
-    if (postsContainer && profileUsername) {
-      // Load profile data
-      loadProfileData(profileUsername);
+    if (postsContainer) {
+      if (profileUsername) {
+        // Load profile data by username
+        loadProfileData(profileUsername);
+      } else if (profileUserId) {
+        // Already loaded in the URL parsing section
+      } else {
+        // No profile identifier found
+        console.error('No profile username or ID found');
+        return;
+      }
 
       // Set up infinite scroll
       window.addEventListener('scroll', debounce(handleScroll, 300));
@@ -56,11 +74,12 @@ const profileModule = (function() {
     }
   }
 
-  // Load profile data
+  // Load profile data by username
   function loadProfileData(username, page = 1) {
     if (!username) return;
 
     isLoading = true;
+    profileUsername = username;
 
     // Show loading state
     if (page === 1) {
@@ -140,11 +159,100 @@ const profileModule = (function() {
       });
   }
 
+  // Load profile data by user ID
+  function loadProfileDataById(userId, page = 1) {
+    if (!userId) return;
+
+    isLoading = true;
+    profileUserId = userId;
+
+    // Show loading state
+    if (page === 1 && postsContainer) {
+      postsContainer.innerHTML = `
+        <div class="text-center p-4">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading profile...</span>
+          </div>
+        </div>
+      `;
+    } else if (postsContainer) {
+      // Show loading indicator at the bottom for more posts
+      postsContainer.insertAdjacentHTML('beforeend', `
+        <div class="text-center p-3 loading-more">
+          <div class="spinner-border spinner-border-sm text-primary" role="status">
+            <span class="visually-hidden">Loading more posts...</span>
+          </div>
+        </div>
+      `);
+    }
+
+    fetch(`/api/profile?uid=${userId}&page=${page}`)
+      .then(response => response.json())
+      .then(data => {
+        isLoading = false;
+
+        // Remove loading indicators
+        if (page === 1) {
+          postsContainer.innerHTML = '';
+        } else {
+          const loadingMore = postsContainer.querySelector('.loading-more');
+          if (loadingMore) loadingMore.remove();
+        }
+
+        // Update user info if first page
+        if (page === 1) {
+          if (userInfoContainer) {
+            renderUserInfo(data);
+          }
+
+          // Render photos and friends
+          if (photosContainer) {
+            renderPhotos(data.posts);
+          }
+
+          if (friendsContainer) {
+            renderFriends(data.friends || []);
+          }
+        }
+
+        // Render posts
+        if (data.posts.length === 0 && page === 1) {
+          showEmptyPostsState();
+        } else {
+          renderProfilePosts(data.posts, page > 1);
+        }
+
+        // Update pagination info
+        currentPage = data.pagination.current_page;
+        hasMorePosts = currentPage < data.pagination.total_pages;
+      })
+      .catch(error => {
+        console.error('Error loading profile data:', error);
+        isLoading = false;
+
+        // Remove loading indicators
+        if (page === 1) {
+          postsContainer.innerHTML = `
+            <div class="alert alert-danger">
+              Error loading profile. <a href="#" onclick="profileModule.loadProfileData('${username}'); return false;">Try again</a>
+            </div>
+          `;
+        } else {
+          const loadingMore = postsContainer.querySelector('.loading-more');
+          if (loadingMore) loadingMore.remove();
+        }
+      });
+  }
+
   // Load more posts
   function loadMorePosts() {
-    if (isLoading || !hasMorePosts || !profileUsername) return;
+    if (isLoading || !hasMorePosts) return;
 
-    loadProfileData(profileUsername, currentPage + 1);
+    if (profileUsername) {
+      loadProfileData(profileUsername, currentPage + 1);
+    } else if (profileUserId) {
+      loadProfileDataById(profileUserId, currentPage + 1);
+    }
   }
 
   // Render user info
@@ -1078,6 +1186,7 @@ const profileModule = (function() {
   // Public methods
   return {
     loadProfileData,
+    loadProfileDataById,
     loadMorePosts
   };
 })();
