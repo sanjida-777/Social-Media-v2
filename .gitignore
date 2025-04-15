@@ -37,7 +37,19 @@ __pycache__/
 *.lock
 
 
+# Credentials and environment variables
 firebase_cred.json
 *cred.json
 cred.json
 .env
+
+# Documentation build directories
+docs/_build/
+docs/_static/
+docs/_templates/
+
+# Exclude README files from being ignored
+!README.md
+!README.rst
+!docs/README.md
+!*/README.md
