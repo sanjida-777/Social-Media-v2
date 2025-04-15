@@ -38,8 +38,13 @@ def login_required(f):
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
     """User login page"""
+    # Log session state before processing
+    logger.debug(f"Login route - Session before processing: {session}")
+    logger.debug(f"Login route - g.user before processing: {g.user}")
+
     # If user is already logged in, redirect to home
     if g.user:
+        logger.debug(f"User already logged in as {g.user.username}, redirecting to home")
         return redirect(url_for('main.index'))
 
     if request.method == 'POST':
@@ -49,24 +54,37 @@ def login():
 
         # Log login attempt (without password)
         logger.info(f"Login attempt for email: {email}")
+        logger.debug(f"Form data: {request.form}")
 
         if not email or not password:
+            logger.warning("Email or password missing in form submission")
             flash('Email and password are required.', 'danger')
-            return render_template('login.html')
+            return render_template('auth/login.html')
 
         # Find user by email
         user = User.query.filter_by(email=email).first()
+        logger.debug(f"User lookup result: {user}")
 
         # Check if user exists and password is correct
-        if not user or not check_password_hash(user.password_hash, password):
-            # Log failed login attempt
-            logger.warning(f"Failed login attempt for email: {email}")
+        if not user:
+            logger.warning(f"Failed login attempt: User not found for email: {email}")
             flash('Invalid email or password.', 'danger')
-            return render_template('login.html')
+            return render_template('auth/login.html')
+
+        if not check_password_hash(user.password_hash, password):
+            logger.warning(f"Failed login attempt: Incorrect password for user: {user.id} - {user.email}")
+            flash('Invalid email or password.', 'danger')
+            return render_template('auth/login.html')
+
+        # Clear any existing session data first
+        session.clear()
 
         # Set user session with secure flags
         session['user_id'] = user.id
         session.permanent = True  # Use permanent session
+        session.modified = True   # Ensure session is saved
+
+        logger.debug(f"Session after setting user_id: {session}")
 
         # Update last online time
         user.last_online = datetime.now()
@@ -81,9 +99,11 @@ def login():
             return redirect(next_url)
 
         flash('Login successful!', 'success')
-        return redirect(url_for('main.index'))
+        response = redirect(url_for('main.index'))
+        logger.debug(f"Redirecting to main.index with response: {response}")
+        return response
 
-    return render_template('login.html')
+    return render_template('auth/login.html')
 
 @auth_bp.route('/forgot-password', methods=['GET', 'POST'])
 def forgot_password():
@@ -102,7 +122,7 @@ def forgot_password():
         else:
             flash('Email not found.', 'danger')
 
-    return render_template('forgot_password.html')
+    return render_template('auth/forgot_password.html')
 
 @auth_bp.route('/register', methods=['GET', 'POST'])
 def register():
@@ -123,17 +143,17 @@ def register():
 
         if not username or not email or not password:
             flash('All fields are required.', 'danger')
-            return render_template('register.html')
+            return render_template('auth/register.html')
 
         # Validate password strength
         if len(password) < 8:
             flash('Password must be at least 8 characters long.', 'danger')
-            return render_template('register.html')
+            return render_template('auth/register.html')
 
         # Check if passwords match
         if confirm_password and password != confirm_password:
             flash('Passwords do not match.', 'danger')
-            return render_template('register.html')
+            return render_template('auth/register.html')
 
         # Check if user already exists
         existing_user = User.query.filter(
@@ -145,7 +165,7 @@ def register():
                 flash('Email address already in use.', 'danger')
             else:
                 flash('Username already taken.', 'danger')
-            return render_template('register.html')
+            return render_template('auth/register.html')
 
         # Create new user with secure password hashing
         new_user = User(
@@ -170,12 +190,21 @@ def register():
         flash('Registration successful!', 'success')
         return redirect(url_for('main.index'))
 
-    return render_template('register.html')
+    return render_template('auth/register.html')
 
 @auth_bp.route('/logout')
 def logout():
     """Log out user"""
-    session.pop('user_id', None)
+    # Log the user ID before logout for debugging
+    user_id = session.get('user_id')
+    logger.info(f"Logging out user: {user_id}")
+
+    # Clear the entire session instead of just removing user_id
+    session.clear()
+
+    # Ensure the session is properly reset
+    session.modified = True
+
     flash('You have been logged out', 'success')
     return redirect(url_for('auth.login'))
 
@@ -183,6 +212,8 @@ def logout():
 def api_login():
     """API endpoint for login"""
     logger.debug("API login attempt")
+    logger.debug(f"API login - Session before processing: {session}")
+    logger.debug(f"API login - g.user before processing: {g.user}")
 
     # Get JSON data
     data = request.get_json()
@@ -198,8 +229,10 @@ def api_login():
 
     # Log login attempt (without password)
     logger.debug(f"API login attempt for email: {email}")
+    logger.debug(f"Request data: {data}")
 
     if not email or not password:
+        logger.warning("Email or password missing in API request")
         return jsonify({
             'success': False,
             'message': 'Email and password are required'
@@ -207,6 +240,7 @@ def api_login():
 
     # Find user by email
     user = User.query.filter_by(email=email).first()
+    logger.debug(f"User lookup result: {user}")
 
     # Check if user exists
     if not user:
@@ -234,10 +268,15 @@ def api_login():
             'message': 'Invalid email or password'
         }), 401
 
+    # Clear any existing session data first
+    session.clear()
+
     # Set user session with secure flags
     session['user_id'] = user.id
     session.permanent = True  # Use permanent session
-    logger.debug(f"User session set: user_id={user.id}")
+    session.modified = True   # Ensure session is saved
+
+    logger.debug(f"Session after setting user_id: {session}")
 
     # Update last online time
     user.last_online = datetime.now()
@@ -248,7 +287,7 @@ def api_login():
     logger.info(f"API login successful: {user.id} - {user.email}")
 
     # Return user data (excluding sensitive information)
-    return jsonify({
+    response = jsonify({
         'success': True,
         'user': {
             'id': user.id,
@@ -256,6 +295,9 @@ def api_login():
             'email': user.email
         }
     })
+
+    logger.debug(f"API login response: {response}")
+    return response
 
 @auth_bp.route('/api/register', methods=['POST'])
 def api_register():
@@ -351,13 +393,16 @@ def api_logout():
         logger.info(f"API logout for user_id: {user_id}")
 
         # Clear session
-        session.pop('user_id', None)
         session.clear()  # Clear all session data for security
+        session.modified = True  # Ensure the session is properly reset
 
-        return jsonify({
+        # Set a response with cookie clearing
+        response = jsonify({
             'success': True,
             'message': 'Logged out successfully'
         })
+
+        return response
     else:
         # User wasn't logged in
         logger.warning("API logout attempt for user who wasn't logged in")
@@ -402,7 +447,7 @@ def profile(username=None):
     friend_request_received = False
 
     return render_template(
-        'profile.html',
+        'profile/profile.html',
         profile_user=user,
         posts=posts,
         friends=friends,
@@ -449,7 +494,7 @@ def edit_profile():
         flash('Profile updated successfully', 'success')
         return redirect(url_for('auth.profile', username=g.user.username))
 
-    return render_template('edit_profile.html')
+    return render_template('profile/edit_profile.html')
 
 
 
@@ -512,7 +557,7 @@ def friends():
         })
 
     return render_template(
-        'friends.html',
+        'friends/friends.html',
         friends=friends,
         friend_requests=friend_requests,
         friend_suggestions=friend_suggestions
@@ -558,7 +603,7 @@ def messages(username):
                 })
 
         return render_template(
-            'inbox.html',
+            'messaging/inbox.html',
             conversations=formatted_conversations
         )
 
@@ -597,7 +642,7 @@ def messages(username):
     db.session.commit()
 
     return render_template(
-        'messages.html',
+        'messaging/messages.html',
         other_user=other_user,
         messages=messages,
         conversation_id=conversation.id
@@ -609,7 +654,7 @@ def settings():
     if not g.user:
         return redirect(url_for('auth.login'))
 
-    return render_template('settings.html')
+    return render_template('auth/settings.html')
 
 @auth_bp.route('/update-email', methods=['POST'])
 def update_email():
@@ -734,7 +779,7 @@ def test_filters():
     one_week_ago = now - timedelta(weeks=1)
 
     return render_template(
-        'test_filters.html',
+        'test/test_filters.html',
         now=now,
         one_hour_ago=one_hour_ago,
         one_day_ago=one_day_ago,

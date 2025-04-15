@@ -18,7 +18,7 @@ story_bp = Blueprint('story', __name__)
 @story_bp.route('/stories')
 @login_required
 def stories():
-    return render_template('story.html')
+    return render_template('story/story.html')
 
 @story_bp.route('/api/stories')
 @login_required
@@ -156,7 +156,7 @@ def create_story():
         flash('Story created successfully', 'success')
         return redirect(url_for('story.stories'))
 
-    return render_template('create_story.html')
+    return render_template('story/create_story.html')
 
 @story_bp.route('/api/story/<int:story_id>/view', methods=['POST'])
 @login_required

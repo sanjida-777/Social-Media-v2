@@ -21,7 +21,7 @@ feed_bp = Blueprint('feed', __name__)
 def index():
     if g.user:
         # Show feed for logged in users
-        return render_template('feed.html')
+        return render_template('feed/feed.html')
     else:
         # Redirect to login for guests
         return redirect(url_for('auth.login'))
@@ -137,12 +137,12 @@ def create_post():
                 flash('Post created successfully', 'success')
                 return redirect(url_for('feed.index'))
 
-    return render_template('create_post.html')
+    return render_template('post/create_post.html')
 
 @feed_bp.route('/post/<int:post_id>')
 def view_post(post_id):
     post = Post.query.get_or_404(post_id)
-    return render_template('post.html', post=post)
+    return render_template('post/post.html', post=post)
 
 @feed_bp.route('/api/post/<int:post_id>/like', methods=['POST'])
 @login_required
@@ -248,7 +248,7 @@ def search():
     query = request.args.get('q', '').strip()
 
     if not query:
-        return render_template('search.html', results=None, query=None)
+        return render_template('feed/search.html', results=None, query=None)
 
     # Search for users
     users = User.query.filter(
@@ -261,7 +261,7 @@ def search():
         Post.content.ilike(f'%{query}%')
     ).order_by(Post.created_at.desc()).limit(20).all()
 
-    return render_template('search.html', users=users, posts=posts, query=query)
+    return render_template('feed/search.html', users=users, posts=posts, query=query)
 
 @feed_bp.route('/api/search')
 def api_search():

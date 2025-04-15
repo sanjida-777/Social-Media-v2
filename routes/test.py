@@ -19,10 +19,10 @@ def upload_test():
     uploaded_urls = []
     primary_url = None
     error = None
-    
+
     if request.method == 'POST' and 'photo' in request.files:
         photo = request.files['photo']
-        
+
         # Check if photo is valid
         if photo.filename == '':
             error = "No file selected"
@@ -30,11 +30,11 @@ def upload_test():
             try:
                 # Try to upload the photo using our multi-site upload system
                 url = save_photo(photo)
-                
+
                 if url:
                     # Get the FileUpload record to get all URLs
                     file_upload = FileUpload.query.filter_by(primary_url=url).first()
-                    
+
                     if file_upload:
                         # Get all URLs
                         uploaded_urls = file_upload.get_all_urls()
@@ -48,9 +48,9 @@ def upload_test():
             except Exception as e:
                 app.logger.error(f"Upload test error: {e}")
                 error = f"An error occurred: {str(e)}"
-    
-    return render_template('upload_test.html', 
-                           form=form, 
-                           uploaded_urls=uploaded_urls, 
-                           primary_url=primary_url, 
+
+    return render_template('test/upload_test.html',
+                           form=form,
+                           uploaded_urls=uploaded_urls,
+                           primary_url=primary_url,
                            error=error)

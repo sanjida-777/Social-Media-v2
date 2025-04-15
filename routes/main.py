@@ -42,7 +42,7 @@ def index():
 @main_bp.route('/api-test')
 def api_test():
     """API test page"""
-    return render_template('api_test.html')
+    return render_template('test/api_test.html')
 
 @main_bp.route('/messages')
 def messages_redirect():
