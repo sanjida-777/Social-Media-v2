@@ -17,19 +17,19 @@ def get_profile(username=None):
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 10, type=int)
 
-        # Get user by ID or username
+        # Get user by UID or username
         uid = request.args.get('uid')
 
         if uid:
-            # Get user by ID
-            user = User.query.get(uid)
+            # Get user by UID (10-digit identifier)
+            user = User.query.filter_by(uid=uid).first()
         elif username:
             # Get user by username
             user = User.query.filter_by(username=username).first()
         else:
             return jsonify({
                 'success': False,
-                'error': 'No username or user ID provided'
+                'error': 'No username or user UID provided'
             }), 400
 
         if not user:
