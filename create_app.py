@@ -32,9 +32,16 @@ def create_app():
     app.secret_key = os.getenv("SECRET_KEY", "fb-like-app-secret-key")
 
     # Configure session security
-    app.config['SESSION_COOKIE_SECURE'] = os.getenv('ENVIRONMENT') != 'development'  # Secure in production
+    app.config['SESSION_COOKIE_SECURE'] = False  # Don't require HTTPS in development
     app.config['SESSION_COOKIE_HTTPONLY'] = True  # Prevent JavaScript access
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # Allow cookies in same-site requests
     app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)  # Session expiration
+    app.config['SESSION_TYPE'] = 'filesystem'  # Use filesystem for session storage
+    app.config['SESSION_USE_SIGNER'] = True  # Sign the session cookie
+    app.config['SESSION_FILE_DIR'] = os.path.join(os.path.dirname(__file__), 'flask_session')  # Session file directory
+
+    # Create session directory if it doesn't exist
+    os.makedirs(app.config['SESSION_FILE_DIR'], exist_ok=True)
 
     # Configure proxy settings
     app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)  # needed for url_for to generate with https
@@ -82,6 +89,24 @@ def create_app():
     from routes.api import api_bp  # Import the main API blueprint
     from routes.profile import profile_bp
 
+    # Import route modules to register routes with blueprints
+    # Auth routes
+    import routes.auth.login
+    import routes.auth.register
+    import routes.auth.profile
+    import routes.auth.settings
+    import routes.auth.friends
+    import routes.auth.messages
+
+    # Main routes
+    import routes.main.index
+    import routes.main.messages
+
+    # API routes
+    import routes.api.user
+    import routes.api.friends
+
+    # Register all blueprints
     app.register_blueprint(auth_bp)
     app.register_blueprint(feed_bp)
     app.register_blueprint(main_bp)
@@ -106,10 +131,16 @@ def create_app():
 
     @app.before_request
     def before_request():
+        # Log session state
+        logger.debug(f"Before request - Session: {session}")
+
         g.user = None
         if 'user_id' in session:
             from models import User
-            g.user = User.query.get(session['user_id'])
+            user_id = session.get('user_id')
+            logger.debug(f"Looking up user with ID: {user_id}")
+            g.user = User.query.get(user_id)
+            logger.debug(f"User lookup result: {g.user}")
 
         # Add current timestamp to g for logging and debugging
         g.request_time = datetime.now()
@@ -117,12 +148,35 @@ def create_app():
         # Log request details
         logger.debug(f"Request: {request.method} {request.path} from {request.remote_addr}")
 
+        # Log cookies
+        logger.debug(f"Request cookies: {request.cookies}")
+
+        # Check if session cookie is present
+        if 'session' in request.cookies:
+            logger.debug("Session cookie is present")
+        else:
+            logger.debug("Session cookie is NOT present")
+
     @app.after_request
     def after_request(response):
         # Calculate request time
         if hasattr(g, 'request_time'):
             duration = datetime.now() - g.request_time
             logger.debug(f"Request completed in {duration.total_seconds():.3f}s")
+
+        # Log response details
+        logger.debug(f"Response status: {response.status_code}")
+        logger.debug(f"Response headers: {response.headers}")
+
+        # Log session state after request
+        logger.debug(f"After request - Session: {session}")
+
+        # Check if session cookie is being set in the response
+        if 'Set-Cookie' in response.headers:
+            logger.debug(f"Setting cookies: {response.headers['Set-Cookie']}")
+            if 'session=' in response.headers['Set-Cookie']:
+                logger.debug("Session cookie is being set in the response")
+
         return response
 
     return app

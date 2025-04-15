@@ -1,5 +1,6 @@
 import logging
 from flask_socketio import SocketIO
+from flask_session import Session
 
 # Import the create_app function
 from create_app import create_app
@@ -9,6 +10,9 @@ logger = logging.getLogger(__name__)
 
 # Create the Flask app
 app = create_app()
+
+# Initialize Flask-Session
+Session(app)
 
 # Initialize SocketIO for real-time features
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
