@@ -151,6 +151,11 @@
 {% endblock %}
 
 {% block extra_scripts %}
+<!-- Add current user ID for JavaScript -->
+{% if g.user %}
+<input type="hidden" id="current-user-id" value="{{ g.user.id }}">
+{% endif %}
+
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Load profile data

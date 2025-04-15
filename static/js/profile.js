@@ -198,13 +198,22 @@ const profileModule = (function() {
   function renderProfileActions(user, friendshipStatus, isFollowing) {
     const currentUserId = getCurrentUserId();
 
+    // If not logged in, show login button
+    if (!currentUserId) {
+      return `
+        <a href="/auth/login" class="btn btn-primary me-2">
+          <i class="bi bi-box-arrow-in-right me-1"></i> Login to Interact
+        </a>
+      `;
+    }
+
     // If this is the current user's profile
     if (user.id == currentUserId) {
       return `
-        <a href="/profile/edit" class="btn btn-outline-primary me-2">
+        <a href="/auth/settings" class="btn btn-outline-primary me-2">
           <i class="bi bi-pencil me-1"></i> Edit Profile
         </a>
-        <a href="/settings" class="btn btn-outline-secondary">
+        <a href="/auth/settings" class="btn btn-outline-secondary">
           <i class="bi bi-gear me-1"></i> Settings
         </a>
       `;
