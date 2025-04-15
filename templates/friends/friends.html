@@ -20,10 +20,10 @@
                                 <small class="text-muted">{{ request.created_at|humanize }}</small>
                             </div>
                             <div class="d-flex">
-                                <button class="btn btn-sm btn-success me-1" onclick="acceptFriendRequest({{ request.sender.id }})">
+                                <button class="btn btn-sm btn-success me-1" onclick="acceptFriendRequest({{ request.sender.id }})" title="Accept">
                                     <i class="bi bi-check-lg"></i>
                                 </button>
-                                <button class="btn btn-sm btn-outline-danger" onclick="rejectFriendRequest({{ request.sender.id }})">
+                                <button class="btn btn-sm btn-outline-danger" onclick="rejectFriendRequest({{ request.sender.id }})" title="Decline">
                                     <i class="bi bi-x-lg"></i>
                                 </button>
                             </div>
@@ -48,13 +48,14 @@
                                 <div class="fw-bold">{{ suggestion.username }}</div>
                                 <small class="text-muted">{% if suggestion.mutual_friends > 0 %}<strong>{{ suggestion.mutual_friends }} mutual friend{% if suggestion.mutual_friends > 1 %}s{% endif %}</strong>{% else %}No mutual friends{% endif %}</small>
                             </div>
-                            <div class="d-flex">
-                                <a href="{{ url_for('auth.profile', username=suggestion.username) }}" class="btn btn-sm btn-outline-secondary me-2">
-                                    <i class="bi bi-person"></i>
-                                </a>
-                                <button class="btn btn-sm btn-primary" onclick="sendFriendRequest({{ suggestion.id }})">
-                                    <i class="bi bi-person-plus"></i>
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-outline-primary" type="button" id="suggestionMenu{{ suggestion.id }}" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="bi bi-three-dots-vertical"></i>
                                 </button>
+                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="suggestionMenu{{ suggestion.id }}">
+                                    <li><a class="dropdown-item" href="{{ url_for('auth.profile', username=suggestion.username) }}"><i class="bi bi-person me-2"></i>View Profile</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="sendFriendRequest({{ suggestion.id }}); return false;"><i class="bi bi-person-plus me-2"></i>Add Friend</a></li>
+                                </ul>
                             </div>
                         </div>
                         {% endfor %}
@@ -81,7 +82,7 @@
                         <div class="row" id="friends-container">
                             {% for friend in friends %}
                             <div class="col-md-6 mb-3 friend-item">
-                                <div class="card h-100">
+                                <div class="card h-100 friend-card">
                                     <div class="card-body">
                                         <div class="d-flex align-items-center">
                                             <img src="{{ friend.profile_pic or url_for('static', filename='images/default-avatar.svg') }}" alt="{{ friend.username }}" class="rounded-circle me-3" width="60" height="60">
@@ -92,16 +93,24 @@
                                         </div>
                                     </div>
                                     <div class="card-footer bg-transparent">
-                                        <div class="d-flex justify-content-between">
+                                        <div class="d-flex justify-content-between friend-actions">
                                             <a href="{{ url_for('auth.profile', username=friend.username) }}" class="btn btn-sm btn-outline-primary">
                                                 <i class="bi bi-person"></i> Profile
                                             </a>
                                             <a href="{{ url_for('auth.messages', username=friend.username) }}" class="btn btn-sm btn-outline-success">
                                                 <i class="bi bi-chat"></i> Message
                                             </a>
-                                            <button class="btn btn-sm btn-outline-danger" onclick="unfriend({{ friend.id }})">
-                                                <i class="bi bi-person-dash"></i>
-                                            </button>
+                                            <div class="dropdown">
+                                                <button class="btn btn-sm btn-outline-secondary" type="button" id="friendMenu{{ friend.id }}" data-bs-toggle="dropdown" aria-expanded="false">
+                                                    <i class="bi bi-three-dots-vertical"></i>
+                                                </button>
+                                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="friendMenu{{ friend.id }}">
+                                                    <li><a class="dropdown-item" href="{{ url_for('auth.profile', username=friend.username) }}"><i class="bi bi-person me-2"></i>View Profile</a></li>
+                                                    <li><a class="dropdown-item" href="{{ url_for('auth.messages', username=friend.username) }}"><i class="bi bi-chat me-2"></i>Send Message</a></li>
+                                                    <li><hr class="dropdown-divider"></li>
+                                                    <li><a class="dropdown-item text-danger" href="#" onclick="unfriend({{ friend.id }}); return false;"><i class="bi bi-person-dash me-2"></i>Remove Friend</a></li>
+                                                </ul>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -182,11 +191,12 @@
                 .then(data => {
                     if (data.success) {
                         // Update UI
-                        const button = document.querySelector(`button[onclick="sendFriendRequest(${userId})"]`);
-                        button.innerHTML = '<i class="bi bi-hourglass-split"></i>';
-                        button.disabled = true;
-                        button.classList.remove('btn-primary');
-                        button.classList.add('btn-secondary');
+                        const menuItem = document.querySelector(`a[onclick="sendFriendRequest(${userId}); return false;"]`);
+                        if (menuItem) {
+                            menuItem.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Request Sent';
+                            menuItem.classList.add('disabled');
+                            menuItem.onclick = function(e) { e.preventDefault(); return false; };
+                        }
                         alert('Friend request sent!');
                     } else {
                         alert('Error: ' + (data.error || data.message || 'Unknown error'));
@@ -343,7 +353,7 @@
             .then(data => {
                 if (data.success) {
                     // Remove friend from UI
-                    const friendElement = document.querySelector(`button[onclick="unfriend(${userId})"]`).closest('.friend-item');
+                    const friendElement = document.querySelector(`a[onclick="unfriend(${userId}); return false;"]`).closest('.friend-item');
                     friendElement.remove();
                 } else {
                     alert('Error: ' + (data.error || data.message || 'Unknown error'));

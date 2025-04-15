@@ -358,3 +358,61 @@ body {
   background-color: var(--hover-bg);
   border-radius: 8px;
 }
+
+/* Friends Page */
+.friend-card {
+  transition: all 0.2s ease;
+}
+
+.friend-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.friend-actions {
+  display: flex;
+  gap: 5px;
+}
+
+.friend-actions .btn {
+  padding: 0.25rem 0.5rem;
+}
+
+.friend-actions .dropdown-menu {
+  min-width: 200px;
+  background-color: var(--surface-bg);
+  border: 1px solid var(--divider-color);
+}
+
+.friend-actions .dropdown-item {
+  color: var(--text-color);
+  padding: 0.5rem 1rem;
+}
+
+.friend-actions .dropdown-item:hover {
+  background-color: var(--hover-bg);
+}
+
+.friend-actions .dropdown-item.text-danger:hover {
+  background-color: rgba(255, 69, 58, 0.2);
+}
+
+.friend-actions .dropdown-divider {
+  border-top: 1px solid var(--divider-color);
+}
+
+@media (max-width: 576px) {
+  .friend-item {
+    width: 100%;
+  }
+
+  .friends-container .col-md-6 {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  .card-footer .btn {
+    padding: 0.25rem 0.4rem;
+    font-size: 0.75rem;
+  }
+}
