@@ -513,7 +513,7 @@ const profileModule = (function() {
 
     setButtonLoading(button);
 
-    fetch(`/api/friend/${username}/remove`, {
+    fetch(`/profile/api/friend/${username}/remove`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -547,7 +547,7 @@ const profileModule = (function() {
   function cancelRequest(username, button) {
     setButtonLoading(button);
 
-    fetch(`/api/friend_request/${username}/cancel`, {
+    fetch(`/profile/api/friend/${username}/cancel`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -581,7 +581,7 @@ const profileModule = (function() {
   function acceptRequest(username, button) {
     setButtonLoading(button);
 
-    fetch(`/api/friend_request/${username}/accept`, {
+    fetch(`/profile/api/friend/${username}/accept`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -622,7 +622,7 @@ const profileModule = (function() {
   function declineRequest(username, button) {
     setButtonLoading(button);
 
-    fetch(`/api/friend_request/${username}/decline`, {
+    fetch(`/profile/api/friend/${username}/decline`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
