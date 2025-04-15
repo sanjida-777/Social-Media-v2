@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "layout/base.html" %}
 
 {% block title %}Create Story | Social App{% endblock %}
 
@@ -37,13 +37,13 @@
                                 </div>
                             </div>
                         </div>
-                        
+
                         <!-- Text content section -->
                         <div class="story-content-section mb-4" data-type="text">
                             <h6 class="mb-2">Text Story</h6>
                             <textarea class="form-control" name="content" rows="5" placeholder="Share what's on your mind..."></textarea>
                         </div>
-                        
+
                         <!-- Photo content section -->
                         <div class="story-content-section mb-4" data-type="photo" style="display: none;">
                             <h6 class="mb-2">Photo Story</h6>
@@ -57,7 +57,7 @@
                                 <textarea class="form-control" id="photo-caption" name="content" rows="2" placeholder="Add a caption..."></textarea>
                             </div>
                         </div>
-                        
+
                         <!-- Video content section -->
                         <div class="story-content-section mb-4" data-type="video" style="display: none;">
                             <h6 class="mb-2">Video Story</h6>
@@ -74,7 +74,7 @@
                                 <textarea class="form-control" id="video-caption" name="content" rows="2" placeholder="Add a caption..."></textarea>
                             </div>
                         </div>
-                        
+
                         <div class="d-grid">
                             <button type="submit" class="btn btn-primary">Create Story</button>
                         </div>
@@ -97,14 +97,14 @@
             const form = document.getElementById('create-story-form');
             const storyTypeRadios = form.querySelectorAll('input[name="story_type"]');
             const storyContentSections = form.querySelectorAll('.story-content-section');
-            
+
             // Handle story type selection
             storyTypeRadios.forEach(radio => {
                 radio.addEventListener('change', function() {
                     storyContentSections.forEach(section => {
                         section.style.display = 'none';
                     });
-                    
+
                     const selectedType = this.value;
                     const targetSection = form.querySelector(`.story-content-section[data-type="${selectedType}"]`);
                     if (targetSection) {
@@ -112,46 +112,46 @@
                     }
                 });
             });
-            
+
             // Handle photo preview
             const photoInput = form.querySelector('input[name="photo"]');
             const photoPreview = form.querySelector('.photo-preview');
-            
+
             if (photoInput && photoPreview) {
                 photoInput.addEventListener('change', function() {
                     if (this.files && this.files[0]) {
                         const reader = new FileReader();
-                        
+
                         reader.onload = function(e) {
                             photoPreview.innerHTML = `<img src="${e.target.result}" class="img-fluid rounded" alt="Photo preview">`;
                             photoPreview.style.display = 'block';
                         };
-                        
+
                         reader.readAsDataURL(this.files[0]);
                     }
                 });
             }
-            
+
             // Handle video preview and duration check
             const videoInput = form.querySelector('input[name="video"]');
             const videoPreview = form.querySelector('.video-preview');
             const videoDurationError = form.querySelector('.video-duration-error');
-            
+
             if (videoInput && videoPreview) {
                 videoInput.addEventListener('change', function() {
                     if (this.files && this.files[0]) {
                         const file = this.files[0];
                         const videoURL = URL.createObjectURL(file);
-                        
+
                         // Create video element to check duration
                         const video = document.createElement('video');
                         video.muted = true;
-                        
+
                         video.onloadedmetadata = function() {
                             URL.revokeObjectURL(videoURL);
-                            
+
                             const duration = video.duration;
-                            
+
                             if (duration > 60) {
                                 // Video too long
                                 videoPreview.innerHTML = '';
@@ -168,21 +168,21 @@
                                 videoPreview.style.display = 'block';
                             }
                         };
-                        
+
                         video.src = videoURL;
                     }
                 });
             }
-            
+
             // Handle form submission
             form.addEventListener('submit', function(e) {
                 e.preventDefault();
-                
+
                 const storyType = form.querySelector('input[name="story_type"]:checked').value;
-                
+
                 // Validate based on story type
                 let isValid = true;
-                
+
                 if (storyType === 'text') {
                     const textContent = form.querySelector('textarea[name="content"]').value.trim();
                     if (!textContent) {
@@ -202,14 +202,14 @@
                         isValid = false;
                     }
                 }
-                
+
                 if (isValid) {
                     // Show loading state
                     const submitBtn = form.querySelector('button[type="submit"]');
                     const originalText = submitBtn.innerHTML;
                     submitBtn.disabled = true;
                     submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Creating...';
-                    
+
                     // Submit form
                     form.submit();
                 }

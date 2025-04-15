@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "layout/base.html" %}
 
 {% block title %}Messages | Social App{% endblock %}
 
@@ -23,7 +23,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Chat content column -->
         <div class="col-md-8 col-lg-9 p-0">
             {% if chat %}
@@ -47,7 +47,7 @@
                             </button>
                         </div>
                     </div>
-                    
+
                     <!-- Chat messages -->
                     <div class="chat-body" id="chat-messages">
                         <div class="text-center p-4">
@@ -56,7 +56,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Chat input -->
                     <div class="chat-footer">
                         <form id="message-form">
@@ -101,7 +101,7 @@
             <div class="modal-body">
                 <!-- User info -->
                 <div class="d-flex align-items-center mb-4">
-                    <img src="{{ other_user.profile_pic or url_for('static', filename='img/default-avatar.png') }}" 
+                    <img src="{{ other_user.profile_pic or url_for('static', filename='img/default-avatar.png') }}"
                          alt="{{ other_user.username }}" class="rounded-circle me-3" width="64" height="64">
                     <div>
                         <h5 class="mb-1">{{ other_user.username }}</h5>
@@ -110,7 +110,7 @@
                         </a>
                     </div>
                 </div>
-                
+
                 <!-- Shared photos -->
                 <h6 class="mb-3">Shared Photos</h6>
                 <div class="d-flex flex-wrap mb-4" id="shared-photos">
@@ -144,17 +144,17 @@
             const messageForm = document.getElementById('message-form');
             const messageInput = document.getElementById('message-input');
             const newChatBtn = document.getElementById('new-chat-btn');
-            
+
             // Get current chat ID
             const chatId = {{ chat.id if chat else 'null' }};
-            
+
             // Load chat list
             if (chatList) {
                 fetch('/api/chats')
                     .then(response => response.json())
                     .then(data => {
                         chatList.innerHTML = '';
-                        
+
                         if (data.chats.length === 0) {
                             chatList.innerHTML = `
                                 <div class="text-center p-4">
@@ -165,7 +165,7 @@
                                     <button class="btn btn-primary mt-2" id="start-chat-btn">Start a conversation</button>
                                 </div>
                             `;
-                            
+
                             const startChatBtn = document.getElementById('start-chat-btn');
                             if (startChatBtn) {
                                 startChatBtn.addEventListener('click', function() {
@@ -178,13 +178,13 @@
                                 const chatItem = document.createElement('a');
                                 chatItem.className = `chat-item list-group-item list-group-item-action d-flex align-items-center ${chat.id === chatId ? 'active' : ''}`;
                                 chatItem.href = `/chat/${chat.id}`;
-                                
+
                                 const lastMessage = chat.last_message ? truncateText(chat.last_message.content, 30) : 'No messages yet';
                                 const lastMessageTime = chat.last_message ? timeAgo(chat.last_message.created_at) : '';
-                                
+
                                 chatItem.innerHTML = `
                                     <div class="chat-avatar me-3 position-relative">
-                                        <img src="${chat.profile_pic || '/static/img/default-avatar.png'}" 
+                                        <img src="${chat.profile_pic || '/static/img/default-avatar.png'}"
                                             alt="${chat.name}" class="rounded-circle" width="50" height="50">
                                         ${chat.is_group ? '<span class="position-absolute bottom-0 end-0 badge rounded-pill bg-primary"><i class="bi bi-people-fill"></i></span>' : ''}
                                     </div>
@@ -197,12 +197,12 @@
                                             ${lastMessage}
                                         </p>
                                     </div>
-                                    ${chat.unread_count > 0 ? 
-                                        `<div class="chat-unread-badge badge bg-danger rounded-pill">${chat.unread_count}</div>` : 
+                                    ${chat.unread_count > 0 ?
+                                        `<div class="chat-unread-badge badge bg-danger rounded-pill">${chat.unread_count}</div>` :
                                         ''
                                     }
                                 `;
-                                
+
                                 chatList.appendChild(chatItem);
                             });
                         }
@@ -216,14 +216,14 @@
                         `;
                     });
             }
-            
+
             // Load chat messages if chat ID is available
             if (chatMessages && chatId) {
                 fetch(`/api/chat/${chatId}/messages`)
                     .then(response => response.json())
                     .then(data => {
                         chatMessages.innerHTML = '';
-                        
+
                         if (data.messages.length === 0) {
                             chatMessages.innerHTML = `
                                 <div class="text-center p-4">
@@ -236,16 +236,16 @@
                             `;
                         } else {
                             const currentUserId = document.getElementById('current-user-id').value;
-                            
+
                             data.messages.forEach(message => {
                                 const isOwn = message.user_id == currentUserId;
                                 const messageEl = document.createElement('div');
-                                
+
                                 messageEl.className = `message-item ${isOwn ? 'message-own' : 'message-other'}`;
                                 messageEl.dataset.messageId = message.id;
-                                
+
                                 let contentHTML = '';
-                                
+
                                 if (message.is_deleted) {
                                     contentHTML = `<div class="message-deleted text-muted"><i class="bi bi-trash me-1"></i> This message was deleted</div>`;
                                 } else if (message.message_type === 'text') {
@@ -258,12 +258,12 @@
                                         </div>
                                     `;
                                 }
-                                
+
                                 messageEl.innerHTML = `
                                     <div class="message-bubble">
                                         ${!isOwn ? `
                                             <div class="message-avatar">
-                                                <img src="${message.profile_pic || '/static/img/default-avatar.png'}" alt="${message.sender}" 
+                                                <img src="${message.profile_pic || '/static/img/default-avatar.png'}" alt="${message.sender}"
                                                     class="rounded-circle" width="28" height="28">
                                             </div>
                                         ` : ''}
@@ -274,8 +274,8 @@
                                                 <small class="message-time text-muted">${formatTime(message.created_at)}</small>
                                                 ${isOwn ? `
                                                     <span class="message-status">
-                                                        ${message.read_by && message.read_by.length > 0 ? 
-                                                            `<i class="bi bi-check2-all text-primary" title="Read"></i>` : 
+                                                        ${message.read_by && message.read_by.length > 0 ?
+                                                            `<i class="bi bi-check2-all text-primary" title="Read"></i>` :
                                                             `<i class="bi bi-check2" title="Sent"></i>`
                                                         }
                                                     </span>
@@ -295,13 +295,13 @@
                                         ` : ''}
                                     </div>
                                 `;
-                                
+
                                 chatMessages.appendChild(messageEl);
                             });
-                            
+
                             // Scroll to bottom
                             chatMessages.scrollTop = chatMessages.scrollHeight;
-                            
+
                             // Mark messages as read
                             fetch(`/api/chat/${chatId}/read`, {
                                 method: 'POST',
@@ -322,18 +322,18 @@
                         `;
                     });
             }
-            
+
             // Handle message form submission if available
             if (messageForm && chatId) {
                 messageForm.addEventListener('submit', function(e) {
                     e.preventDefault();
-                    
+
                     const message = messageInput.value.trim();
                     if (!message) return;
-                    
+
                     // Clear input
                     messageInput.value = '';
-                    
+
                     // Send message
                     fetch(`/api/chat/${chatId}/send`, {
                         method: 'POST',
@@ -351,19 +351,19 @@
                                 .then(data => {
                                     // Clear chat messages
                                     chatMessages.innerHTML = '';
-                                    
+
                                     // Render messages
                                     const currentUserId = document.getElementById('current-user-id').value;
-                                    
+
                                     data.messages.forEach(message => {
                                         const isOwn = message.user_id == currentUserId;
                                         const messageEl = document.createElement('div');
-                                        
+
                                         messageEl.className = `message-item ${isOwn ? 'message-own' : 'message-other'}`;
                                         messageEl.dataset.messageId = message.id;
-                                        
+
                                         let contentHTML = '';
-                                        
+
                                         if (message.is_deleted) {
                                             contentHTML = `<div class="message-deleted text-muted"><i class="bi bi-trash me-1"></i> This message was deleted</div>`;
                                         } else if (message.message_type === 'text') {
@@ -376,12 +376,12 @@
                                                 </div>
                                             `;
                                         }
-                                        
+
                                         messageEl.innerHTML = `
                                             <div class="message-bubble">
                                                 ${!isOwn ? `
                                                     <div class="message-avatar">
-                                                        <img src="${message.profile_pic || '/static/img/default-avatar.png'}" alt="${message.sender}" 
+                                                        <img src="${message.profile_pic || '/static/img/default-avatar.png'}" alt="${message.sender}"
                                                             class="rounded-circle" width="28" height="28">
                                                     </div>
                                                 ` : ''}
@@ -392,8 +392,8 @@
                                                         <small class="message-time text-muted">${formatTime(message.created_at)}</small>
                                                         ${isOwn ? `
                                                             <span class="message-status">
-                                                                ${message.read_by && message.read_by.length > 0 ? 
-                                                                    `<i class="bi bi-check2-all text-primary" title="Read"></i>` : 
+                                                                ${message.read_by && message.read_by.length > 0 ?
+                                                                    `<i class="bi bi-check2-all text-primary" title="Read"></i>` :
                                                                     `<i class="bi bi-check2" title="Sent"></i>`
                                                                 }
                                                             </span>
@@ -413,10 +413,10 @@
                                                 ` : ''}
                                             </div>
                                         `;
-                                        
+
                                         chatMessages.appendChild(messageEl);
                                     });
-                                    
+
                                     // Scroll to bottom
                                     chatMessages.scrollTop = chatMessages.scrollHeight;
                                 })
@@ -434,7 +434,7 @@
                     });
                 });
             }
-            
+
             // New chat button
             if (newChatBtn) {
                 newChatBtn.addEventListener('click', function() {
@@ -442,14 +442,14 @@
                     newChatModal.show();
                 });
             }
-            
+
             // Auto-resize textarea
             if (messageInput) {
                 messageInput.addEventListener('input', function() {
                     this.style.height = 'auto';
                     this.style.height = (this.scrollHeight) + 'px';
                 });
-                
+
                 // Initial resize
                 messageInput.style.height = 'auto';
                 messageInput.style.height = (messageInput.scrollHeight) + 'px';

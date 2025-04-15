@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "layout/base.html" %}
 
 {% block title %}Friends{% endblock %}
 
@@ -46,11 +46,16 @@
                             <img src="{{ suggestion.profile_pic or url_for('static', filename='images/default-avatar.svg') }}" alt="{{ suggestion.username }}" class="rounded-circle me-2" width="50" height="50">
                             <div class="flex-grow-1">
                                 <div class="fw-bold">{{ suggestion.username }}</div>
-                                <small class="text-muted">{{ suggestion.mutual_friends }} mutual friends</small>
+                                <small class="text-muted">{% if suggestion.mutual_friends > 0 %}<strong>{{ suggestion.mutual_friends }} mutual friend{% if suggestion.mutual_friends > 1 %}s{% endif %}</strong>{% else %}No mutual friends{% endif %}</small>
                             </div>
-                            <button class="btn btn-sm btn-primary" onclick="sendFriendRequest({{ suggestion.id }})">
-                                <i class="bi bi-person-plus"></i>
-                            </button>
+                            <div class="d-flex">
+                                <a href="{{ url_for('auth.profile', username=suggestion.username) }}" class="btn btn-sm btn-outline-secondary me-2">
+                                    <i class="bi bi-person"></i>
+                                </a>
+                                <button class="btn btn-sm btn-primary" onclick="sendFriendRequest({{ suggestion.id }})">
+                                    <i class="bi bi-person-plus"></i>
+                                </button>
+                            </div>
                         </div>
                         {% endfor %}
                     {% else %}
@@ -147,19 +152,33 @@
         fetch(`/api/user/${userId}`, {
             method: 'GET',
             headers: {
-                'Content-Type': 'application/json'
-            }
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            credentials: 'same-origin'
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(userData => {
             if (userData.success) {
                 return fetch(`/api/friend_request/${userData.user.username}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            })
-                .then(response => response.json())
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    credentials: 'same-origin'
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     if (data.success) {
                         // Update UI
@@ -188,19 +207,33 @@
         fetch(`/api/user/${userId}`, {
             method: 'GET',
             headers: {
-                'Content-Type': 'application/json'
-            }
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            credentials: 'same-origin'
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(userData => {
             if (userData.success) {
                 return fetch(`/api/friend_request/${userData.user.username}/accept`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            })
-                .then(response => response.json())
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    credentials: 'same-origin'
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     if (data.success) {
                         // Reload page to show updated UI
@@ -224,19 +257,33 @@
         fetch(`/api/user/${userId}`, {
             method: 'GET',
             headers: {
-                'Content-Type': 'application/json'
-            }
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            credentials: 'same-origin'
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(userData => {
             if (userData.success) {
                 return fetch(`/api/friend_request/${userData.user.username}/decline`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            })
-                .then(response => response.json())
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    credentials: 'same-origin'
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     if (data.success) {
                         // Remove request from UI
@@ -262,23 +309,37 @@
             fetch(`/api/user/${userId}`, {
                 method: 'GET',
                 headers: {
-                    'Content-Type': 'application/json'
-                }
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'same-origin'
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(userData => {
                 if (userData.success) {
                     return fetch(`/api/friend/${userData.user.username}/remove`, {
                         method: 'POST',
                         headers: {
-                            'Content-Type': 'application/json'
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        credentials: 'same-origin'
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! Status: ${response.status}`);
                         }
+                        return response.json();
                     });
                 } else {
                     throw new Error('Could not find user');
                 }
             })
-            .then(response => response.json())
             .then(data => {
                 if (data.success) {
                     // Remove friend from UI

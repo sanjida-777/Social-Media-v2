@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "layout/base.html" %}
 
 {% block title %}Group Chat | Social App{% endblock %}
 
@@ -23,7 +23,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Chat content column -->
         <div class="col-md-8 col-lg-9 p-0">
             <div class="chat-container">
@@ -47,7 +47,7 @@
                         </button>
                     </div>
                 </div>
-                
+
                 <!-- Chat messages -->
                 <div class="chat-body" id="chat-messages">
                     <div class="text-center p-4">
@@ -56,7 +56,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Chat input -->
                 <div class="chat-footer">
                     <form id="message-form">
@@ -93,13 +93,13 @@
                         <i class="bi bi-people-fill text-white fs-3"></i>
                     </div>
                     <h5 class="mb-1">{{ chat.name }}</h5>
-                    <p class="text-muted small">Created by 
+                    <p class="text-muted small">Created by
                         <a href="{{ url_for('profile.view_profile', username=chat.creator.username) }}">
                             {{ chat.creator.username }}
                         </a> on {{ chat.created_at|strftime('%b %d, %Y') }}
                     </p>
                 </div>
-                
+
                 <!-- Members -->
                 <h6 class="mb-3 d-flex justify-content-between align-items-center">
                     <span>Members</span>
@@ -110,7 +110,7 @@
                     </button>
                     {% endif %}
                 </h6>
-                
+
                 <div class="group-members" id="chat-members-container">
                     <div class="text-center py-3">
                         <div class="spinner-border spinner-border-sm text-primary" role="status">
@@ -118,7 +118,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Group actions -->
                 <div class="d-grid gap-2 mt-4">
                     <button class="btn btn-outline-danger" id="leave-group-btn">
@@ -174,29 +174,29 @@
             const newChatBtn = document.getElementById('new-chat-btn');
             const leaveGroupBtn = document.getElementById('leave-group-btn');
             const membersContainer = document.getElementById('chat-members-container');
-            
+
             // Load chat members
             if (membersContainer) {
                 fetch(`/api/chat/${chatId}/members`)
                     .then(response => response.json())
                     .then(data => {
                         membersContainer.innerHTML = '';
-                        
+
                         if (data.members.length === 0) {
                             membersContainer.innerHTML = '<p class="text-center text-muted">No members</p>';
                             return;
                         }
-                        
+
                         const currentUserId = document.getElementById('current-user-id').value;
                         const isAdmin = data.members.some(m => m.user_id == currentUserId && m.role === 'admin');
-                        
+
                         data.members.forEach(member => {
                             const memberItem = document.createElement('div');
                             memberItem.className = 'member-item d-flex align-items-center p-2 border-bottom';
                             memberItem.dataset.userId = member.user_id;
-                            
+
                             memberItem.innerHTML = `
-                                <img src="${member.profile_pic || '/static/img/default-avatar.png'}" 
+                                <img src="${member.profile_pic || '/static/img/default-avatar.png'}"
                                     alt="${member.username}" class="rounded-circle me-3" width="40" height="40">
                                 <div class="flex-grow-1">
                                     <h6 class="mb-0">
@@ -205,15 +205,15 @@
                                     </h6>
                                     <small class="text-muted">Joined ${timeAgo(member.joined_at)}</small>
                                 </div>
-                                
+
                                 ${isAdmin && member.user_id != currentUserId ? `
                                     <div class="dropdown">
                                         <button class="btn btn-sm" type="button" data-bs-toggle="dropdown">
                                             <i class="bi bi-three-dots-vertical"></i>
                                         </button>
                                         <ul class="dropdown-menu dropdown-menu-end">
-                                            ${member.role !== 'admin' ? 
-                                                `<li><a class="dropdown-item" href="#" data-action="make-admin" data-user-id="${member.user_id}">Make Admin</a></li>` : 
+                                            ${member.role !== 'admin' ?
+                                                `<li><a class="dropdown-item" href="#" data-action="make-admin" data-user-id="${member.user_id}">Make Admin</a></li>` :
                                                 ''
                                             }
                                             <li><a class="dropdown-item text-danger" href="#" data-action="remove-member" data-user-id="${member.user_id}">Remove</a></li>
@@ -221,22 +221,22 @@
                                     </div>
                                 ` : ''}
                             `;
-                            
+
                             membersContainer.appendChild(memberItem);
                         });
-                        
+
                         // Update member count
                         const memberCountEl = document.querySelector('.member-count');
                         if (memberCountEl) {
                             memberCountEl.textContent = `${data.members.length} members`;
                         }
-                        
+
                         // Add event listeners
                         document.querySelectorAll('[data-action="make-admin"]').forEach(btn => {
                             btn.addEventListener('click', function(e) {
                                 e.preventDefault();
                                 const userId = this.dataset.userId;
-                                
+
                                 fetch(`/api/chat/${chatId}/make_admin`, {
                                     method: 'POST',
                                     headers: {
@@ -265,12 +265,12 @@
                                 });
                             });
                         });
-                        
+
                         document.querySelectorAll('[data-action="remove-member"]').forEach(btn => {
                             btn.addEventListener('click', function(e) {
                                 e.preventDefault();
                                 const userId = this.dataset.userId;
-                                
+
                                 if (confirm('Are you sure you want to remove this member?')) {
                                     fetch(`/api/chat/${chatId}/remove_member`, {
                                         method: 'POST',
@@ -288,7 +288,7 @@
                                             if (memberItem) {
                                                 memberItem.remove();
                                             }
-                                            
+
                                             // Update member count
                                             const memberCountEl = document.querySelector('.member-count');
                                             if (memberCountEl) {
@@ -316,7 +316,7 @@
                         `;
                     });
             }
-            
+
             // Handle leave group button
             if (leaveGroupBtn) {
                 leaveGroupBtn.addEventListener('click', function() {
@@ -343,7 +343,7 @@
                     }
                 });
             }
-            
+
             // Load chat list, messages, handle send message etc. (same as chat.html)
             // This would be duplicated code, in a real implementation we'd use the chat module
         }
