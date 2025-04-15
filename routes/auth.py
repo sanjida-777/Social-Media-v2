@@ -13,7 +13,7 @@ from werkzeug.utils import secure_filename
 
 from database import db
 from sqlalchemy import func
-from models import User, Friend
+from models import User, Friend, Message, Conversation
 from utils.firebase import verify_firebase_token
 
 # Set up logger
@@ -451,31 +451,7 @@ def edit_profile():
 
     return render_template('edit_profile.html')
 
-@auth_bp.route('/messages/<username>')
-def messages(username):
-    """Messages with a specific user"""
-    if not g.user:
-        return redirect(url_for('auth.login'))
 
-    # Special case for inbox
-    if username == 'inbox':
-        # Get recent conversations
-        conversations = []
-        return render_template(
-            'inbox.html',
-            conversations=conversations
-        )
-
-    other_user = User.query.filter_by(username=username).first_or_404()
-
-    # Get conversation history
-    messages = []
-
-    return render_template(
-        'messages.html',
-        other_user=other_user,
-        messages=messages
-    )
 
 @auth_bp.route('/friends')
 def friends():
@@ -540,6 +516,91 @@ def friends():
         friends=friends,
         friend_requests=friend_requests,
         friend_suggestions=friend_suggestions
+    )
+
+@auth_bp.route('/messages/<username>')
+def messages(username):
+    """Messages with a specific user"""
+    if not g.user:
+        return redirect(url_for('auth.login'))
+
+    # Special case for inbox
+    if username == 'inbox':
+        # Get recent conversations
+        conversations = Conversation.query.filter(
+            (Conversation.user1_id == g.user.id) | (Conversation.user2_id == g.user.id)
+        ).order_by(Conversation.last_message_at.desc()).all()
+
+        formatted_conversations = []
+        for conversation in conversations:
+            # Get other user
+            other_user_id = conversation.user2_id if conversation.user1_id == g.user.id else conversation.user1_id
+            other_user = User.query.get(other_user_id)
+
+            # Get last message
+            last_message = Message.query.filter_by(conversation_id=conversation.id).order_by(
+                Message.created_at.desc()
+            ).first()
+
+            # Get unread count
+            unread_count = Message.query.filter_by(
+                conversation_id=conversation.id,
+                recipient_id=g.user.id,
+                read=False
+            ).count()
+
+            if other_user and last_message:
+                formatted_conversations.append({
+                    'id': conversation.id,
+                    'user': other_user,
+                    'last_message': last_message,
+                    'unread_count': unread_count
+                })
+
+        return render_template(
+            'inbox.html',
+            conversations=formatted_conversations
+        )
+
+    # Get the other user
+    other_user = User.query.filter_by(username=username).first_or_404()
+
+    # Find or create conversation
+    conversation = Conversation.query.filter(
+        ((Conversation.user1_id == g.user.id) & (Conversation.user2_id == other_user.id)) |
+        ((Conversation.user1_id == other_user.id) & (Conversation.user2_id == g.user.id))
+    ).first()
+
+    if not conversation:
+        conversation = Conversation(
+            user1_id=g.user.id,
+            user2_id=other_user.id
+        )
+        db.session.add(conversation)
+        db.session.commit()
+
+    # Get messages
+    messages = Message.query.filter_by(conversation_id=conversation.id).order_by(
+        Message.created_at.asc()
+    ).all()
+
+    # Mark unread messages as read
+    unread_messages = Message.query.filter_by(
+        conversation_id=conversation.id,
+        recipient_id=g.user.id,
+        read=False
+    ).all()
+
+    for message in unread_messages:
+        message.read = True
+
+    db.session.commit()
+
+    return render_template(
+        'messages.html',
+        other_user=other_user,
+        messages=messages,
+        conversation_id=conversation.id
     )
 
 @auth_bp.route('/settings')

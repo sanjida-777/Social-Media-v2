@@ -8,37 +8,37 @@
         max-height: 80vh;
         overflow-y: auto;
     }
-    
+
     .conversation-item {
         padding: 15px;
         border-bottom: 1px solid var(--bs-border-color);
         transition: background-color 0.2s;
     }
-    
+
     .conversation-item:hover {
         background-color: var(--bs-dark-bg-subtle);
         cursor: pointer;
     }
-    
+
     .conversation-item.active {
         background-color: var(--bs-primary-bg-subtle);
         border-left: 3px solid var(--bs-primary);
     }
-    
+
     .conversation-avatar {
         width: 50px;
         height: 50px;
         border-radius: 50%;
         object-fit: cover;
     }
-    
+
     .conversation-preview {
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
         max-width: 200px;
     }
-    
+
     .unread-badge {
         background-color: var(--bs-primary);
         color: white;
@@ -46,7 +46,7 @@
         padding: 3px 6px;
         border-radius: 10px;
     }
-    
+
     .search-box {
         position: sticky;
         top: 0;
@@ -76,11 +76,11 @@
                             </button>
                         </div>
                     </div>
-                    
+
                     <div class="conversation-list">
                         {% if conversations %}
                             {% for conversation in conversations %}
-                            <div class="conversation-item d-flex align-items-center" onclick="location.href='{{ url_for('auth.messages', username=conversation.user.username) }}'">
+                            <div class="conversation-item d-flex align-items-center" data-conversation-id="{{ conversation.id }}" onclick="location.href='{{ url_for('auth.messages', username=conversation.user.username) }}'">
                                 <img src="{{ conversation.user.profile_pic or url_for('static', filename='images/default-avatar.svg') }}" alt="{{ conversation.user.username }}" class="conversation-avatar me-3">
                                 <div class="flex-grow-1">
                                     <div class="d-flex justify-content-between align-items-center">
@@ -111,7 +111,7 @@
                         {% endif %}
                     </div>
                 </div>
-                
+
                 <!-- Welcome Screen -->
                 <div class="col-md-8 d-flex align-items-center justify-content-center" style="min-height: 500px;">
                     <div class="text-center p-4">
@@ -130,19 +130,51 @@
 {% endblock %}
 
 {% block additional_js %}
+<script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const searchInput = document.getElementById('message-search');
+        const conversationList = document.querySelector('.conversation-list');
         const conversationItems = document.querySelectorAll('.conversation-item');
-        
+        const currentUserId = {{ g.user.id }};
+
+        // Connect to Socket.IO server
+        const socket = io();
+
+        // Handle connection
+        socket.on('connect', function() {
+            console.log('Connected to Socket.IO server');
+
+            // Join user's personal room for direct notifications
+            socket.emit('join_user_room');
+        });
+
+        // Handle new messages
+        socket.on('new_message', function(data) {
+            updateConversationList(data);
+        });
+
+        // Handle messages read
+        socket.on('messages_read', function(data) {
+            // Update unread count for the conversation
+            const conversationItem = document.querySelector(`.conversation-item[data-conversation-id="${data.conversation_id}"]`);
+            if (conversationItem) {
+                const unreadBadge = conversationItem.querySelector('.unread-badge');
+                if (unreadBadge) {
+                    unreadBadge.remove();
+                }
+            }
+        });
+
+        // Handle search functionality
         if (searchInput) {
             searchInput.addEventListener('input', function() {
                 const searchTerm = this.value.toLowerCase();
-                
-                conversationItems.forEach(item => {
+
+                document.querySelectorAll('.conversation-item').forEach(item => {
                     const username = item.querySelector('h6').textContent.toLowerCase();
                     const preview = item.querySelector('.conversation-preview').textContent.toLowerCase();
-                    
+
                     if (username.includes(searchTerm) || preview.includes(searchTerm)) {
                         item.style.display = 'flex';
                     } else {
@@ -150,6 +182,124 @@
                     }
                 });
             });
+        }
+
+        // Function to update conversation list when new message arrives
+        function updateConversationList(messageData) {
+            // Check if conversation already exists in the list
+            const conversationId = messageData.conversation_id;
+            let conversationItem = document.querySelector(`.conversation-item[data-conversation-id="${conversationId}"]`);
+
+            // Get other user info
+            const otherUserId = messageData.sender_id === currentUserId ? messageData.recipient_id : messageData.sender_id;
+            const otherUsername = messageData.sender_id === currentUserId ? messageData.recipient_username : messageData.sender_username;
+            const otherProfilePic = messageData.sender_id === currentUserId ? messageData.recipient_profile_pic : messageData.sender_profile_pic;
+
+            // Format message preview
+            const messagePreview = messageData.sender_id === currentUserId ?
+                `<span class="text-muted">You: </span>${messageData.content}` :
+                messageData.content;
+
+            // Format time
+            const messageTime = formatMessageTime(messageData.created_at);
+
+            if (conversationItem) {
+                // Update existing conversation
+                const previewElement = conversationItem.querySelector('.conversation-preview');
+                const timeElement = conversationItem.querySelector('small.text-muted');
+
+                previewElement.innerHTML = messagePreview;
+                timeElement.textContent = messageTime;
+
+                // Update unread badge if message is from other user
+                if (messageData.sender_id !== currentUserId) {
+                    let unreadBadge = conversationItem.querySelector('.unread-badge');
+                    if (unreadBadge) {
+                        // Increment existing badge
+                        const count = parseInt(unreadBadge.textContent) + 1;
+                        unreadBadge.textContent = count;
+                    } else {
+                        // Create new badge
+                        const badgeContainer = conversationItem.querySelector('.d-flex.justify-content-between.align-items-center:last-child');
+                        const newBadge = document.createElement('span');
+                        newBadge.className = 'unread-badge';
+                        newBadge.textContent = '1';
+                        badgeContainer.appendChild(newBadge);
+                    }
+                }
+
+                // Move conversation to top of list
+                conversationList.prepend(conversationItem);
+            } else if (conversationList && !conversationList.querySelector('.text-center.py-5')) {
+                // Create new conversation item if not the empty state
+                const newConversationItem = document.createElement('div');
+                newConversationItem.className = 'conversation-item d-flex align-items-center';
+                newConversationItem.setAttribute('data-conversation-id', conversationId);
+                newConversationItem.onclick = function() {
+                    location.href = `/auth/messages/${otherUsername}`;
+                };
+
+                // Create unread badge if message is from other user
+                const unreadBadgeHtml = messageData.sender_id !== currentUserId ?
+                    '<span class="unread-badge">1</span>' : '';
+
+                newConversationItem.innerHTML = `
+                    <img src="${otherProfilePic || '/static/images/default-avatar.svg'}" alt="${otherUsername}" class="conversation-avatar me-3">
+                    <div class="flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0">${otherUsername}</h6>
+                            <small class="text-muted">${messageTime}</small>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <p class="mb-0 text-muted conversation-preview">${messagePreview}</p>
+                            ${unreadBadgeHtml}
+                        </div>
+                    </div>
+                `;
+
+                // Add to top of list
+                if (conversationList.firstChild) {
+                    conversationList.insertBefore(newConversationItem, conversationList.firstChild);
+                } else {
+                    conversationList.appendChild(newConversationItem);
+                }
+            } else if (conversationList && conversationList.querySelector('.text-center.py-5')) {
+                // Replace empty state with new conversation
+                conversationList.innerHTML = `
+                    <div class="conversation-item d-flex align-items-center" data-conversation-id="${conversationId}" onclick="location.href='/auth/messages/${otherUsername}'">
+                        <img src="${otherProfilePic || '/static/images/default-avatar.svg'}" alt="${otherUsername}" class="conversation-avatar me-3">
+                        <div class="flex-grow-1">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0">${otherUsername}</h6>
+                                <small class="text-muted">${messageTime}</small>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <p class="mb-0 text-muted conversation-preview">${messagePreview}</p>
+                                ${messageData.sender_id !== currentUserId ? '<span class="unread-badge">1</span>' : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // Function to format message time
+        function formatMessageTime(timestamp) {
+            const date = new Date(timestamp);
+            const now = new Date();
+
+            // If today, show time only
+            if (date.toDateString() === now.toDateString()) {
+                return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            }
+
+            // If this year, show month and day
+            if (date.getFullYear() === now.getFullYear()) {
+                return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+            }
+
+            // Otherwise show full date
+            return date.toLocaleDateString();
         }
     });
 </script>

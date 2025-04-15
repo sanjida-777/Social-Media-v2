@@ -459,3 +459,50 @@ def update_friendship_score(mapper, connection, target):
         # Update the relationship score
         friendship.relationship_score = new_score
         db.session.commit()
+
+
+class Conversation(db.Model):
+    """Model for conversations between two users"""
+    id = db.Column(db.Integer, primary_key=True)
+    user1_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user2_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    last_message_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Relationships
+    user1 = db.relationship('User', foreign_keys=[user1_id], backref=db.backref('conversations_started', lazy='dynamic'))
+    user2 = db.relationship('User', foreign_keys=[user2_id], backref=db.backref('conversations_received', lazy='dynamic'))
+    messages = db.relationship('Message', backref='conversation', lazy='dynamic', cascade='all, delete-orphan')
+
+    def __repr__(self):
+        return f'<Conversation {self.id} between {self.user1_id} and {self.user2_id}>'
+
+
+class Message(db.Model):
+    """Model for messages in a conversation"""
+    id = db.Column(db.Integer, primary_key=True)
+    conversation_id = db.Column(db.Integer, db.ForeignKey('conversation.id'), nullable=False)
+    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    recipient_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    read = db.Column(db.Boolean, default=False)
+
+    # Relationships
+    sender = db.relationship('User', foreign_keys=[sender_id], backref=db.backref('messages_sent', lazy='dynamic'))
+    recipient = db.relationship('User', foreign_keys=[recipient_id], backref=db.backref('messages_received', lazy='dynamic'))
+
+    def __repr__(self):
+        return f'<Message {self.id} from {self.sender_id} to {self.recipient_id}>'
+
+    def serialize(self):
+        """Return message as a dictionary"""
+        return {
+            'id': self.id,
+            'conversation_id': self.conversation_id,
+            'sender_id': self.sender_id,
+            'recipient_id': self.recipient_id,
+            'content': self.content,
+            'created_at': self.created_at.isoformat(),
+            'read': self.read
+        }

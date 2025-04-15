@@ -79,7 +79,7 @@ def create_app():
     from routes.main import main_bp
     from routes.story import story_bp
     from routes.notifications import notifications_bp
-    from routes.api import api_bp
+    from routes.api import api_bp  # Import the main API blueprint
     from routes.profile import profile_bp
 
     app.register_blueprint(auth_bp)
@@ -87,7 +87,7 @@ def create_app():
     app.register_blueprint(main_bp)
     app.register_blueprint(story_bp)
     app.register_blueprint(notifications_bp)
-    app.register_blueprint(api_bp)
+    app.register_blueprint(api_bp)  # This registers all API routes
     app.register_blueprint(profile_bp)
 
     # Import Firebase utilities

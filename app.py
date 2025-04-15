@@ -34,7 +34,10 @@ with app.app_context():
         # Continue execution even if database setup fails
         # This allows the app to start and show appropriate error messages
 
+# Import socket.io event handlers
+import events
+
 # Run the application
 if __name__ == '__main__':
     logger.info("Starting application")
-    app.run(debug=True, port=5000)
+    socketio.run(app, debug=True, port=5000)

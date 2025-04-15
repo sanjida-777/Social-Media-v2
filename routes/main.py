@@ -13,23 +13,23 @@ def index():
     # If user is not logged in, redirect to login
     if not g.user:
         return redirect(url_for('auth.login'))
-    
+
     # Get stories (most recent from friends and followed users)
     stories = []
-    
+
     # Get posts for the feed (from friends and followed users)
     posts = []
-    
+
     # Get friend suggestions
     friend_suggestions = []
-    
+
     # Get trending tags
     trending_tags = []
-    
-    # Configuration values 
+
+    # Configuration values
     from config import get_site_name
     site_name = get_site_name()
-    
+
     return render_template(
         'main/index.html',
         site_name=site_name,
@@ -38,3 +38,15 @@ def index():
         friend_suggestions=friend_suggestions,
         trending_tags=trending_tags
     )
+
+@main_bp.route('/api-test')
+def api_test():
+    """API test page"""
+    return render_template('api_test.html')
+
+@main_bp.route('/messages')
+def messages_redirect():
+    """Redirect to messages inbox"""
+    if not g.user:
+        return redirect(url_for('auth.login'))
+    return redirect(url_for('auth.messages', username='inbox'))
