@@ -9,7 +9,7 @@ from sqlalchemy import desc
 from app import db
 from models import User, ChatGroup, ChatMember, ChatMessage, MessageReadReceipt
 from utils.mqtt_client import get_mqtt_client
-from routes.auth import login_required
+from routes.auth_old import login_required
 
 # Set up logger
 logger = logging.getLogger(__name__)

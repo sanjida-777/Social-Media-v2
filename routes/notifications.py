@@ -10,7 +10,7 @@ from flask_socketio import SocketIO
 # Initialize SocketIO
 socketio = SocketIO()
 from models import User, Notification
-from routes.auth import login_required
+from routes.auth_old import login_required
 
 # Set up logger
 logger = logging.getLogger(__name__)

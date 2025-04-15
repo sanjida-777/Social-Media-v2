@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Test Filters{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <h1>Test Filters</h1>
+    
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">strftime Filter Test</h5>
+            <p>Current time formatted: {{ now|strftime('%B %d, %Y %H:%M:%S') }}</p>
+        </div>
+    </div>
+    
+    <div class="card mt-4">
+        <div class="card-body">
+            <h5 class="card-title">timeago Filter Test</h5>
+            <p>Current time as timeago: {{ now|timeago }}</p>
+            <p>One hour ago: {{ one_hour_ago|timeago }}</p>
+            <p>One day ago: {{ one_day_ago|timeago }}</p>
+            <p>One week ago: {{ one_week_ago|timeago }}</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

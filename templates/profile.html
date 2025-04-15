@@ -1,30 +1,30 @@
 {% extends "base.html" %}
 
-{% block title %}{{ user.username }} | Social App{% endblock %}
+{% block title %}{{ profile_user.username }} | Social App{% endblock %}
 
 {% block content %}
 <div class="container">
     <div class="profile mb-4">
         <!-- Cover Photo -->
-        <div class="profile-cover" style="background-image: url('{{ user.cover_pic or '' }}');">
-            {% if g.user and g.user.id == user.id %}
+        <div class="profile-cover" style="background-image: url('{{ profile_user.cover_pic or '' }}');">
+            {% if g.user and g.user.id == profile_user.id %}
             <div class="change-cover-btn" id="change-cover-pic-btn">
                 <i class="bi bi-camera"></i>
             </div>
             {% endif %}
         </div>
-        
+
         <!-- Profile Picture & Info -->
         <div class="d-md-flex align-items-end">
             <div class="profile-picture">
-                <img src="{{ user.profile_pic or url_for('static', filename='img/default-avatar.png') }}" alt="{{ user.username }}">
-                {% if g.user and g.user.id == user.id %}
+                <img src="{{ profile_user.profile_pic or url_for('static', filename='img/default-avatar.png') }}" alt="{{ profile_user.username }}">
+                {% if g.user and g.user.id == profile_user.id %}
                 <div class="change-picture-btn" id="change-profile-pic-btn">
                     <i class="bi bi-camera"></i>
                 </div>
                 {% endif %}
             </div>
-            
+
             <div class="profile-info flex-grow-1">
                 <div id="user-info">
                     <!-- Will be populated dynamically -->
@@ -37,7 +37,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="row">
         <!-- Left Sidebar - Desktop only -->
         <div class="col-md-4">
@@ -47,23 +47,23 @@
                     <h5 class="card-title mb-0">About</h5>
                 </div>
                 <div class="card-body">
-                    <p>{{ user.bio or 'No bio yet.' }}</p>
+                    <p>{{ profile_user.bio or 'No bio yet.' }}</p>
                     <hr>
                     <div class="d-flex align-items-center mb-2">
                         <i class="bi bi-envelope me-2"></i>
-                        <span>{{ user.email }}</span>
+                        <span>{{ profile_user.email }}</span>
                     </div>
                     <div class="d-flex align-items-center mb-2">
                         <i class="bi bi-calendar me-2"></i>
-                        <span>Joined {{ user.created_at|strftime('%B %Y') }}</span>
+                        <span>Joined {{ profile_user.created_at|strftime('%B %Y') }}</span>
                     </div>
                     <div class="d-flex align-items-center">
                         <i class="bi bi-clock me-2"></i>
-                        <span>Last online {{ user.last_online|timeago }}</span>
+                        <span>Last online {{ profile_user.last_online|timeago }}</span>
                     </div>
                 </div>
             </div>
-            
+
             <!-- Photos -->
             <div class="card mb-4">
                 <div class="card-header d-flex justify-content-between align-items-center">
@@ -79,12 +79,12 @@
                     </div>
                 </div>
             </div>
-            
+
             <!-- Friends -->
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="card-title mb-0">Friends</h5>
-                    <a href="{{ url_for('feed.friends') }}" class="text-decoration-none">View All</a>
+                    <a href="#" class="text-decoration-none">View All</a>
                 </div>
                 <div class="card-body" id="friends-container">
                     <!-- Will be populated dynamically -->
@@ -96,32 +96,32 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Main Content -->
         <div class="col-md-8">
             <!-- Create Post for own profile -->
-            {% if g.user and g.user.id == user.id %}
+            {% if g.user and g.user.id == profile_user.id %}
             <div class="card create-post-card mb-4">
                 <div class="create-post-header">
-                    <img src="{{ g.user.profile_pic or url_for('static', filename='img/default-avatar.png') }}" 
+                    <img src="{{ g.user.profile_pic or url_for('static', filename='img/default-avatar.png') }}"
                          alt="{{ g.user.username }}" class="rounded-circle" width="40" height="40">
-                    <a href="{{ url_for('feed.create_post') }}" class="create-post-input">
+                    <a href="#" class="create-post-input">
                         What's on your mind, {{ g.user.username }}?
                     </a>
                 </div>
                 <div class="create-post-actions">
-                    <a href="{{ url_for('feed.create_post') }}" class="create-post-action photo">
+                    <a href="#" class="create-post-action photo">
                         <i class="bi bi-image"></i>
                         <span>Photo</span>
                     </a>
-                    <a href="{{ url_for('story.create_story') }}" class="create-post-action feeling">
+                    <a href="#" class="create-post-action feeling">
                         <i class="bi bi-collection"></i>
                         <span>Story</span>
                     </a>
                 </div>
             </div>
             {% endif %}
-            
+
             <!-- Posts -->
             <div id="profile-posts">
                 <!-- Will be populated dynamically -->
@@ -131,7 +131,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <!-- Loading indicator -->
             <div id="loading-indicator" style="display: none;" class="text-center p-3">
                 <div class="spinner-border spinner-border-sm text-primary" role="status">
@@ -143,7 +143,7 @@
 </div>
 
 <!-- File input for profile picture -->
-{% if g.user and g.user.id == user.id %}
+{% if g.user and g.user.id == profile_user.id %}
 <input type="file" id="profile-pic-input" accept="image/*" style="display: none;">
 <input type="file" id="cover-pic-input" accept="image/*" style="display: none;">
 {% endif %}
@@ -155,7 +155,7 @@
     document.addEventListener('DOMContentLoaded', function() {
         // Load profile data
         if (window.profileModule) {
-            window.profileModule.loadProfileData('{{ user.username }}');
+            window.profileModule.loadProfileData('{{ profile_user.username }}');
         }
     });
 </script>

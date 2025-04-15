@@ -5,7 +5,7 @@ from werkzeug.security import generate_password_hash
 
 from app import app, db, save_photo
 from models import User, Post, Friend, Follower, UserInteraction
-from routes.auth import login_required
+from routes.auth_old import login_required
 
 # Set up logger
 logger = logging.getLogger(__name__)

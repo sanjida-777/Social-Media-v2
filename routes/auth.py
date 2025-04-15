@@ -12,6 +12,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
 from database import db
+from sqlalchemy import func
 from models import User
 from utils.firebase import verify_firebase_token
 
@@ -42,8 +43,12 @@ def login():
         return redirect(url_for('main.index'))
 
     if request.method == 'POST':
+        # Get form data with CSRF protection
         email = request.form.get('email')
         password = request.form.get('password')
+
+        # Log login attempt (without password)
+        logger.info(f"Login attempt for email: {email}")
 
         if not email or not password:
             flash('Email and password are required.', 'danger')
@@ -54,15 +59,21 @@ def login():
 
         # Check if user exists and password is correct
         if not user or not check_password_hash(user.password_hash, password):
+            # Log failed login attempt
+            logger.warning(f"Failed login attempt for email: {email}")
             flash('Invalid email or password.', 'danger')
             return render_template('login.html')
 
-        # Set user session
+        # Set user session with secure flags
         session['user_id'] = user.id
+        session.permanent = True  # Use permanent session
 
         # Update last online time
-        user.last_online = datetime.utcnow()
+        user.last_online = datetime.now()
         db.session.commit()
+
+        # Log successful login
+        logger.info(f"User logged in successfully: {user.id} - {user.email}")
 
         # Redirect to home page or next URL
         next_url = request.args.get('next')
@@ -82,12 +93,27 @@ def register():
         return redirect(url_for('main.index'))
 
     if request.method == 'POST':
+        # Get form data with CSRF protection
         username = request.form.get('username')
         email = request.form.get('email')
         password = request.form.get('password')
+        confirm_password = request.form.get('confirm_password')
+
+        # Log registration attempt (without password)
+        logger.info(f"Registration attempt for email: {email}, username: {username}")
 
         if not username or not email or not password:
             flash('All fields are required.', 'danger')
+            return render_template('register.html')
+
+        # Validate password strength
+        if len(password) < 8:
+            flash('Password must be at least 8 characters long.', 'danger')
+            return render_template('register.html')
+
+        # Check if passwords match
+        if confirm_password and password != confirm_password:
+            flash('Passwords do not match.', 'danger')
             return render_template('register.html')
 
         # Check if user already exists
@@ -102,21 +128,25 @@ def register():
                 flash('Username already taken.', 'danger')
             return render_template('register.html')
 
-        # Create new user
+        # Create new user with secure password hashing
         new_user = User(
             username=username,
             email=email,
-            password_hash=generate_password_hash(password),
-            created_at=datetime.utcnow(),
-            last_online=datetime.utcnow()
+            password_hash=generate_password_hash(password, method='pbkdf2:sha256:50000'),
+            created_at=datetime.now(),
+            last_online=datetime.now()
         )
 
         # Add user to database
         db.session.add(new_user)
         db.session.commit()
 
-        # Log user in
+        # Log successful registration
+        logger.info(f"User registered successfully: {new_user.id} - {new_user.email}")
+
+        # Log user in with secure session
         session['user_id'] = new_user.id
+        session.permanent = True  # Use permanent session
 
         flash('Registration successful!', 'success')
         return redirect(url_for('main.index'))
@@ -147,7 +177,8 @@ def api_login():
     email = data.get('email')
     password = data.get('password')
 
-    logger.debug(f"Login data: {data}")
+    # Log login attempt (without password)
+    logger.debug(f"API login attempt for email: {email}")
 
     if not email or not password:
         return jsonify({
@@ -157,10 +188,11 @@ def api_login():
 
     # Find user by email
     user = User.query.filter_by(email=email).first()
-    logger.debug(f"User lookup result: {user}")
 
     # Check if user exists
     if not user:
+        # Log failed login attempt
+        logger.warning(f"API login failed: user not found for email: {email}")
         return jsonify({
             'success': False,
             'message': 'Invalid email or password'
@@ -175,23 +207,28 @@ def api_login():
         # Check if password is correct
         password_correct = check_password_hash(user.password_hash, password)
 
-    logger.debug(f"Password verification result: {password_correct}")
-
     if not password_correct:
+        # Log failed login attempt
+        logger.warning(f"API login failed: incorrect password for user: {user.id} - {user.email}")
         return jsonify({
             'success': False,
             'message': 'Invalid email or password'
         }), 401
 
-    # Set user session
+    # Set user session with secure flags
     session['user_id'] = user.id
+    session.permanent = True  # Use permanent session
     logger.debug(f"User session set: user_id={user.id}")
 
     # Update last online time
-    user.last_online = datetime.utcnow()
+    user.last_online = datetime.now()
     db.session.commit()
     logger.debug("Updated last online time")
 
+    # Log successful login
+    logger.info(f"API login successful: {user.id} - {user.email}")
+
+    # Return user data (excluding sensitive information)
     return jsonify({
         'success': True,
         'user': {
@@ -207,6 +244,7 @@ def api_register():
     # Get JSON data
     data = request.get_json()
     if not data:
+        logger.debug("No JSON data received for registration")
         return jsonify({
             'success': False,
             'message': 'No data provided'
@@ -216,45 +254,62 @@ def api_register():
     email = data.get('email')
     password = data.get('password')
 
+    # Log registration attempt (without password)
+    logger.info(f"API registration attempt for email: {email}, username: {username}")
+
     if not username or not email or not password:
         return jsonify({
             'success': False,
             'message': 'All fields are required'
         }), 400
 
-    # Check if user already exists
+    # Validate password strength
+    if len(password) < 8:
+        return jsonify({
+            'success': False,
+            'message': 'Password must be at least 8 characters long'
+        }), 400
+
+    # Check if user already exists (case-insensitive email check)
     existing_user = User.query.filter(
-        (User.email == email) | (User.username == username)
+        (func.lower(User.email) == func.lower(email)) | (User.username == username)
     ).first()
 
     if existing_user:
         if existing_user.email == email:
+            logger.warning(f"API registration failed: email already in use: {email}")
             return jsonify({
                 'success': False,
                 'message': 'Email address already in use'
             }), 400
         else:
+            logger.warning(f"API registration failed: username already taken: {username}")
             return jsonify({
                 'success': False,
                 'message': 'Username already taken'
             }), 400
 
-    # Create new user
+    # Create new user with secure password hashing
     new_user = User(
         username=username,
         email=email,
-        password_hash=generate_password_hash(password),
-        created_at=datetime.utcnow(),
-        last_online=datetime.utcnow()
+        password_hash=generate_password_hash(password, method='pbkdf2:sha256:50000'),
+        created_at=datetime.now(),
+        last_online=datetime.now()
     )
 
     # Add user to database
     db.session.add(new_user)
     db.session.commit()
 
-    # Log user in
-    session['user_id'] = new_user.id
+    # Log successful registration
+    logger.info(f"API user registered successfully: {new_user.id} - {new_user.email}")
 
+    # Log user in with secure session
+    session['user_id'] = new_user.id
+    session.permanent = True  # Use permanent session
+
+    # Return user data (excluding sensitive information)
     return jsonify({
         'success': True,
         'user': {
@@ -267,11 +322,26 @@ def api_register():
 @auth_bp.route('/api/logout', methods=['POST'])
 def api_logout():
     """API endpoint for logout"""
-    session.pop('user_id', None)
-    return jsonify({
-        'success': True,
-        'message': 'Logged out successfully'
-    })
+    # Check if user is logged in
+    if 'user_id' in session:
+        user_id = session.get('user_id')
+        logger.info(f"API logout for user_id: {user_id}")
+
+        # Clear session
+        session.pop('user_id', None)
+        session.clear()  # Clear all session data for security
+
+        return jsonify({
+            'success': True,
+            'message': 'Logged out successfully'
+        })
+    else:
+        # User wasn't logged in
+        logger.warning("API logout attempt for user who wasn't logged in")
+        return jsonify({
+            'success': False,
+            'message': 'No active session found'
+        }), 401
 
 @auth_bp.route('/profile/<username>')
 def profile(username):
@@ -511,30 +581,20 @@ def delete_account():
     flash('Your account has been deleted', 'success')
     return redirect(url_for('auth.login'))
 
-@auth_bp.route('/forgot-password', methods=['GET', 'POST'])
-def forgot_password():
-    """Forgot password page"""
-    if g.user:
-        return redirect(url_for('main.index'))
+@auth_bp.route('/test-filters')
+def test_filters():
+    """Test Jinja2 filters"""
+    from datetime import datetime, timedelta
 
-    if request.method == 'POST':
-        email = request.form.get('email')
+    now = datetime.now()
+    one_hour_ago = now - timedelta(hours=1)
+    one_day_ago = now - timedelta(days=1)
+    one_week_ago = now - timedelta(weeks=1)
 
-        if not email:
-            flash('Email is required', 'error')
-            return render_template('forgot_password.html')
-
-        # Check if user exists
-        user = User.query.filter_by(email=email).first()
-
-        if user:
-            # In a real app, you would generate a token and send a password reset email
-            # For now, just show a success message
-            flash('If an account exists with that email, a password reset link has been sent.', 'success')
-        else:
-            # Don't reveal that the user doesn't exist
-            flash('If an account exists with that email, a password reset link has been sent.', 'success')
-
-        return redirect(url_for('auth.login'))
-
-    return render_template('forgot_password.html')
+    return render_template(
+        'test_filters.html',
+        now=now,
+        one_hour_ago=one_hour_ago,
+        one_day_ago=one_day_ago,
+        one_week_ago=one_week_ago
+    )

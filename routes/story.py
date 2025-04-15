@@ -7,7 +7,7 @@ from werkzeug.utils import secure_filename
 from database import db
 from utils.upload import save_photo, save_video
 from models import User, Story, StoryView
-from routes.auth import login_required
+from routes.auth_old import login_required
 
 # Set up logger
 logger = logging.getLogger(__name__)

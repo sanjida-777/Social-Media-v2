@@ -8,7 +8,7 @@ from database import db
 from utils.upload import save_photo
 from flask import current_app
 from models import User, Post, PostMedia, PostLike, Comment, Story, Friend, Follower, Notification
-from routes.auth import login_required
+from routes.auth_old import login_required
 from utils.feed_algorithm import rank_posts
 
 # Set up logger
@@ -126,8 +126,16 @@ def create_post():
 
             db.session.commit()
 
-            flash('Post created successfully', 'success')
-            return redirect(url_for('feed.index'))
+            # Check if the request expects JSON (AJAX request)
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.headers.get('Accept') == 'application/json':
+                return jsonify({
+                    'success': True,
+                    'post': post.serialize()
+                })
+            else:
+                # Regular form submission
+                flash('Post created successfully', 'success')
+                return redirect(url_for('feed.index'))
 
     return render_template('create_post.html')
 

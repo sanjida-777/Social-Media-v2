@@ -8,7 +8,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 # Import and register blueprints
 from routes.main import main_bp
-from routes.auth import auth_bp
+from routes.auth_old import auth_bp
 from routes.chat import chat_bp
 
 # Register blueprints

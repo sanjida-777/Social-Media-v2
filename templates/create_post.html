@@ -15,24 +15,24 @@
                     <form id="create-post-form" action="{{ url_for('feed.create_post') }}" method="post" enctype="multipart/form-data">
                         <div class="mb-3">
                             <div class="d-flex align-items-center mb-3">
-                                <img src="{{ g.user.profile_pic or url_for('static', filename='img/default-avatar.png') }}" 
+                                <img src="{{ g.user.profile_pic or url_for('static', filename='img/default-avatar.png') }}"
                                      alt="{{ g.user.username }}" class="rounded-circle me-2" width="40" height="40">
                                 <div>
                                     <h6 class="mb-0">{{ g.user.username }}</h6>
                                     <small class="text-muted">Public post</small>
                                 </div>
                             </div>
-                            
-                            <textarea class="form-control" name="content" id="post-content" rows="4" 
-                                      placeholder="What's on your mind, {{ g.user.username }}?" 
+
+                            <textarea class="form-control" name="content" id="post-content" rows="4"
+                                      placeholder="What's on your mind, {{ g.user.username }}?"
                                       data-autosize></textarea>
                         </div>
-                        
+
                         <!-- Media preview -->
                         <div id="media-preview" class="media-preview">
                             <div class="row" id="media-items-container"></div>
                         </div>
-                        
+
                         <!-- File inputs -->
                         <div class="d-flex justify-content-between align-items-center border rounded p-3 mb-3">
                             <div>Add to your post</div>
@@ -40,11 +40,11 @@
                                 <button type="button" id="add-photo-btn" class="btn btn-light me-2" title="Add Photos">
                                     <i class="bi bi-image text-success"></i>
                                 </button>
-                                
+
                                 <input type="file" id="photo-input" name="media" accept="image/*" multiple style="display: none;">
                             </div>
                         </div>
-                        
+
                         <div class="d-grid">
                             <button type="submit" class="btn btn-primary">Post</button>
                         </div>
@@ -65,31 +65,34 @@
         const photoInput = document.getElementById('photo-input');
         const mediaPreview = document.getElementById('media-preview');
         const mediaItemsContainer = document.getElementById('media-items-container');
-        
+
         // Handle form submission
         form.addEventListener('submit', function(e) {
             e.preventDefault();
-            
+
             const content = contentField.value.trim();
-            
+
             // Validate that either content or media is provided
             if (!content && photoInput.files.length === 0) {
                 showToast('Please add some text or photos to your post', 'warning');
                 return;
             }
-            
+
             // Show loading state
             const submitBtn = form.querySelector('button[type="submit"]');
             const originalText = submitBtn.innerHTML;
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Posting...';
-            
+
             // Submit form
             const formData = new FormData(form);
-            
+
             fetch('{{ url_for("feed.create_post") }}', {
                 method: 'POST',
-                body: formData
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
             })
             .then(response => {
                 if (!response.ok) {
@@ -113,32 +116,32 @@
                 submitBtn.innerHTML = originalText;
             });
         });
-        
+
         // Handle photo button click
         photoBtn.addEventListener('click', function() {
             photoInput.click();
         });
-        
+
         // Handle photo selection
         photoInput.addEventListener('change', function() {
             if (this.files.length > 0) {
                 // Clear preview if needed
                 mediaItemsContainer.innerHTML = '';
-                
+
                 // Check if more than 5 files are selected
                 if (this.files.length > 5) {
                     showToast('You can upload up to 5 photos at once', 'warning');
                     // Truncate to 5 files (this doesn't actually modify the FileList)
                 }
-                
+
                 // Preview each file
                 const maxFiles = Math.min(this.files.length, 5);
                 for (let i = 0; i < maxFiles; i++) {
                     const file = this.files[i];
-                    
+
                     if (file.type.startsWith('image/')) {
                         const reader = new FileReader();
-                        
+
                         reader.onload = function(e) {
                             const mediaItem = document.createElement('div');
                             mediaItem.className = 'col-6 col-md-4 mb-3';
@@ -151,23 +154,23 @@
                                 </div>
                             `;
                             mediaItemsContainer.appendChild(mediaItem);
-                            
+
                             // Show preview container
                             mediaPreview.classList.add('has-media');
                             mediaPreview.style.display = 'block';
                         };
-                        
+
                         reader.readAsDataURL(file);
                     }
                 }
-                
+
                 // Add event listeners to remove buttons (needs to be done after adding all items)
                 setTimeout(() => {
                     document.querySelectorAll('.remove-media').forEach(btn => {
                         btn.addEventListener('click', function() {
                             // Cannot modify FileList directly, so just hide the preview
                             this.closest('.col-6').remove();
-                            
+
                             // Hide preview container if no items left
                             if (mediaItemsContainer.children.length === 0) {
                                 mediaPreview.style.display = 'none';
@@ -177,7 +180,7 @@
                 }, 100);
             }
         });
-        
+
         // Auto-resize textarea
         initAutoResizeTextareas();
     });

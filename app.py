@@ -20,8 +20,19 @@ with app.app_context():
     # Import database and models to ensure tables are created
     from database import db
     import models
-    db.create_all()
-    logger.info("Database tables created successfully")
+
+    try:
+        # Ensure the database connection works
+        db.engine.connect()
+
+        # Create all tables
+        db.create_all()
+        logger.info("Database tables created successfully")
+    except Exception as e:
+        logger.error(f"Error creating database tables: {str(e)}")
+        logger.error(f"Database URI: {app.config['SQLALCHEMY_DATABASE_URI']}")
+        # Continue execution even if database setup fails
+        # This allows the app to start and show appropriate error messages
 
 # Run the application
 if __name__ == '__main__':
