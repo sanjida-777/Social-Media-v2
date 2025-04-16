@@ -153,12 +153,28 @@
         dropdownButtons.forEach(btn => {
             btn.addEventListener('click', function(e) {
                 e.stopPropagation();
-                // Force the dropdown to show above
+
+                // Close all other open dropdowns first
+                const allOpenDropdowns = document.querySelectorAll('.friend-menu-dropdown .dropdown-menu.show');
+                allOpenDropdowns.forEach(openMenu => {
+                    if (openMenu !== this.nextElementSibling) {
+                        const parentDropdown = openMenu.closest('.dropdown');
+                        if (parentDropdown) {
+                            const openBtn = parentDropdown.querySelector('.btn');
+                            const bsDropdown = bootstrap.Dropdown.getInstance(openBtn);
+                            if (bsDropdown) {
+                                bsDropdown.hide();
+                            }
+                        }
+                    }
+                });
+
+                // Force the dropdown to show below
                 setTimeout(() => {
                     const menu = this.nextElementSibling;
                     if (menu) {
-                        menu.style.top = 'auto';
-                        menu.style.bottom = '100%';
+                        menu.style.top = '100%';
+                        menu.style.bottom = 'auto';
                         menu.style.transform = 'none';
                     }
                 }, 0);
@@ -193,11 +209,26 @@
             let dropdown = new bootstrap.Dropdown(dropdownToggle);
             let originalShow = dropdown.show;
             dropdown.show = function() {
+                // Close all other open dropdowns first
+                const allOpenDropdowns = document.querySelectorAll('.dropdown-menu.show');
+                allOpenDropdowns.forEach(openMenu => {
+                    if (openMenu !== dropdownToggle.nextElementSibling) {
+                        const parentDropdown = openMenu.closest('.dropdown');
+                        if (parentDropdown) {
+                            const openBtn = parentDropdown.querySelector('.btn');
+                            const bsDropdown = bootstrap.Dropdown.getInstance(openBtn);
+                            if (bsDropdown) {
+                                bsDropdown.hide();
+                            }
+                        }
+                    }
+                });
+
                 originalShow.call(this);
                 const menu = dropdownToggle.nextElementSibling;
                 if (dropdownToggle.closest('.friend-menu-dropdown') && menu) {
-                    menu.style.top = 'auto';
-                    menu.style.bottom = '100%';
+                    menu.style.top = '100%';
+                    menu.style.bottom = 'auto';
                     menu.style.transform = 'none';
                 }
             };
