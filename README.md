@@ -79,15 +79,34 @@ social-media-app/
 ├── .env                    # Environment variables (not in repo)
 ├── static/                 # Static files (CSS, JS, images)
 ├── templates/              # HTML templates
-├── routes/                 # Route handlers
-│   ├── auth.py             # Authentication routes
-│   ├── feed.py             # Feed and post routes
-│   ├── profile.py          # User profile routes
-│   └── ...
+├── routes/                 # Route handlers (modular structure)
+│   ├── api/                # API routes
+│   │   ├── __init__.py     # API blueprint initialization
+│   │   ├── feed.py         # Feed API endpoints
+│   │   ├── friends.py      # Friends API endpoints
+│   │   ├── messages.py     # Messages API endpoints
+│   │   ├── profile.py      # Profile API endpoints
+│   │   ├── search.py       # Search API endpoints
+│   │   ├── stories.py      # Stories API endpoints
+│   │   └── user.py         # User API endpoints
+│   ├── auth/               # Authentication routes
+│   │   ├── __init__.py     # Auth blueprint initialization
+│   │   ├── friends.py      # Friend management routes
+│   │   ├── login.py        # Login/logout routes
+│   │   ├── messages.py     # Messaging routes
+│   │   ├── profile.py      # Profile routes
+│   │   ├── register.py     # Registration routes
+│   │   └── settings.py     # User settings routes
+│   ├── feed/               # Feed routes
+│   ├── main/               # Main application routes
+│   ├── notifications/      # Notification routes
+│   ├── profile/            # Profile routes
+│   └── story/              # Story routes
 └── utils/                  # Utility functions
     ├── filters.py          # Custom Jinja2 filters
     ├── firebase.py         # Firebase integration
-    └── ...
+    ├── uid_generator.py    # UID generation utilities
+    └── upload.py           # File upload utilities
 ```
 
 ## Contributing

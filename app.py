@@ -18,6 +18,7 @@ Session(app)
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
 # Blueprints are registered in create_app.py
+# Routes are organized in modular structure under routes/ directory
 
 # Create all tables in a with app context
 with app.app_context():

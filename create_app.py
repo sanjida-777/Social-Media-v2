@@ -105,6 +105,11 @@ def create_app():
     # API routes
     import routes.api.user
     import routes.api.friends
+    import routes.api.feed
+    import routes.api.messages
+    import routes.api.profile
+    import routes.api.search
+    import routes.api.stories
 
     # Register all blueprints
     app.register_blueprint(auth_bp)
