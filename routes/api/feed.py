@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from flask import jsonify, request, g, current_app
 from werkzeug.utils import secure_filename
 from database import db
-from models import User, Post, Friend, Follower, Comment, Like, PostMedia
+from models import User, Post, Friend, Follower, Comment, PostLike as Like, PostMedia
 from routes.api import api_bp
 from routes.auth_old import login_required
 from utils.multi_upload import save_multi_uploads
