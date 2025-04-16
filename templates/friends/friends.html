@@ -52,7 +52,7 @@
                                 <button class="btn btn-sm btn-primary" type="button" id="suggestionMenu{{ suggestion.id }}" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
                                     <i class="bi bi-three-dots-vertical"></i>
                                 </button>
-                                <ul class="dropdown-menu dropdown-menu-top" aria-labelledby="suggestionMenu{{ suggestion.id }}">
+                                <ul class="dropdown-menu" aria-labelledby="suggestionMenu{{ suggestion.id }}">
                                     <li><a class="dropdown-item" href="{{ url_for('auth.profile', username=suggestion.username) }}"><i class="bi bi-person me-2"></i>View Profile</a></li>
                                     <li><a class="dropdown-item" href="#" onclick="sendFriendRequest({{ suggestion.id }}); return false;"><i class="bi bi-person-plus me-2"></i>Add Friend</a></li>
                                 </ul>
@@ -94,7 +94,7 @@
                                                 <button class="btn btn-sm btn-outline-primary" type="button" id="friendMenu{{ friend.id }}" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
                                                     <i class="bi bi-three-dots-vertical"></i>
                                                 </button>
-                                                <ul class="dropdown-menu dropdown-menu-top" aria-labelledby="friendMenu{{ friend.id }}">
+                                                <ul class="dropdown-menu" aria-labelledby="friendMenu{{ friend.id }}">
                                                     <li><a class="dropdown-item" href="{{ url_for('auth.profile', username=friend.username) }}"><i class="bi bi-person me-2"></i>View Profile</a></li>
                                                     <li><a class="dropdown-item" href="{{ url_for('auth.messages', username=friend.username) }}"><i class="bi bi-chat me-2"></i>Send Message</a></li>
                                                     <li><a class="dropdown-item" href="#"><i class="bi bi-bell me-2"></i>Notifications</a></li>
@@ -149,6 +149,22 @@
         }
 
         // Initialize dropdowns with custom behavior
+        const dropdownButtons = document.querySelectorAll('.friend-menu-dropdown .btn');
+        dropdownButtons.forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                // Force the dropdown to show above
+                setTimeout(() => {
+                    const menu = this.nextElementSibling;
+                    if (menu) {
+                        menu.style.top = 'auto';
+                        menu.style.bottom = '100%';
+                        menu.style.transform = 'none';
+                    }
+                }, 0);
+            });
+        });
+
         const dropdownMenus = document.querySelectorAll('.friend-menu-dropdown .dropdown-menu');
         dropdownMenus.forEach(menu => {
             // Prevent clicks inside dropdown from closing it
@@ -169,6 +185,22 @@
                     }
                 }
             });
+        });
+
+        // Override Bootstrap's dropdown positioning
+        const dropdownList = [].slice.call(document.querySelectorAll('.dropdown-toggle'));
+        dropdownList.map(function (dropdownToggle) {
+            let dropdown = new bootstrap.Dropdown(dropdownToggle);
+            let originalShow = dropdown.show;
+            dropdown.show = function() {
+                originalShow.call(this);
+                const menu = dropdownToggle.nextElementSibling;
+                if (dropdownToggle.closest('.friend-menu-dropdown') && menu) {
+                    menu.style.top = 'auto';
+                    menu.style.bottom = '100%';
+                    menu.style.transform = 'none';
+                }
+            };
         });
     });
 

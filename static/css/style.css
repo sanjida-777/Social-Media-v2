@@ -386,19 +386,26 @@ body {
 
 /* Custom dropdown positioning for friend menus */
 .friend-menu-dropdown {
-  position: relative;
+  position: relative !important;
 }
 
-.dropdown-menu-top {
-  top: auto;
-  bottom: 100%;
-  margin-bottom: 0.125rem;
-  left: auto;
-  right: 0;
-  position: absolute;
-  z-index: 1000;
+.friend-menu-dropdown .dropdown-menu {
+  top: auto !important;
+  bottom: 100% !important;
+  margin-bottom: 0.125rem !important;
+  left: auto !important;
+  right: 0 !important;
+  position: absolute !important;
+  z-index: 1000 !important;
   transform: none !important;
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Override Bootstrap's dropdown positioning */
+.dropdown-menu.show {
+  top: auto !important;
+  bottom: 100% !important;
+  transform: none !important;
 }
 
 .dropdown-item {
