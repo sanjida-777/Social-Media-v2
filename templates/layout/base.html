@@ -12,6 +12,7 @@
 
     <!-- Main stylesheet -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/notifications.css') }}">
 
     <!-- Additional CSS for specific pages -->
     {% block additional_css %}{% endblock %}
@@ -255,17 +256,50 @@
 
     <!-- Main content -->
     <main class="container py-4 main-content">
-        <!-- Flash messages -->
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category|default('info') }} alert-dismissible fade show" role="alert">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
+        <!-- Flash messages (hidden, will be converted to notifications) -->
+        <div id="flash-messages" style="display: none;">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="flash-message" data-category="{{ category|default('info') }}" data-message="{{ message }}"></div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
+
+        <!-- Script to convert flash messages to notifications -->
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                // Wait for notification system to initialize
+                setTimeout(function() {
+                    if (window.notify) {
+                        // Convert flash messages to notifications
+                        const flashMessages = document.querySelectorAll('.flash-message');
+                        flashMessages.forEach(function(flash) {
+                            const category = flash.dataset.category;
+                            const message = flash.dataset.message;
+
+                            // Map Flask categories to notification types
+                            let type = 'info';
+                            switch(category) {
+                                case 'success': type = 'success'; break;
+                                case 'danger': type = 'error'; break;
+                                case 'warning': type = 'warning'; break;
+                                case 'primary': type = 'primary'; break;
+                                default: type = 'info';
+                            }
+
+                            // Show notification
+                            notify.show({
+                                type: type,
+                                message: message,
+                                duration: 5000
+                            });
+                        });
+                    }
+                }, 100);
+            });
+        </script>
 
         <!-- Page content -->
         {% block content %}{% endblock %}
@@ -289,6 +323,7 @@
 
     <!-- Common JavaScript -->
     <script src="{{ url_for('static', filename='js/utils.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
     <script src="{{ url_for('static', filename='js/profile.js') }}"></script>
     <script src="{{ url_for('static', filename='js/feed.js') }}"></script>
     <script src="{{ url_for('static', filename='js/story.js') }}"></script>

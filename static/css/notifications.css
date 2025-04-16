@@ -1,0 +1,293 @@
+/* 
+ * Smart Notification System Styles
+ * Modern, clean design for notifications and dialogs
+ */
+
+/* Notification Container */
+.notification-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    max-width: 350px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Base Notification Styles */
+.notification {
+    display: flex;
+    background-color: var(--surface-bg, #ffffff);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+    padding: 12px;
+    border-left: 4px solid #ccc;
+    transform: translateX(120%);
+    opacity: 0;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    max-width: 100%;
+    position: relative;
+}
+
+.notification.notification-show {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+.notification.notification-hiding {
+    transform: translateX(120%);
+    opacity: 0;
+}
+
+/* Notification Icon */
+.notification-icon {
+    display: flex;
+    align-items: flex-start;
+    padding-right: 12px;
+    font-size: 1.25rem;
+}
+
+/* Notification Content */
+.notification-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.notification-title {
+    font-weight: 600;
+    margin-bottom: 4px;
+    font-size: 0.95rem;
+}
+
+.notification-message {
+    font-size: 0.875rem;
+    color: var(--text-color, #333);
+    word-wrap: break-word;
+    margin-bottom: 8px;
+}
+
+/* Notification Close Button */
+.notification-close {
+    background: none;
+    border: none;
+    color: #999;
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 0;
+    margin-left: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+}
+
+.notification-close:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+    color: #666;
+}
+
+/* Progress Bar */
+.notification-progress {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    width: 100%;
+    background-color: currentColor;
+    opacity: 0.3;
+}
+
+/* Notification Types */
+.notification-success {
+    border-left-color: var(--bs-success);
+}
+
+.notification-error {
+    border-left-color: var(--bs-danger);
+}
+
+.notification-warning {
+    border-left-color: var(--bs-warning);
+}
+
+.notification-info {
+    border-left-color: var(--bs-info);
+}
+
+.notification-primary {
+    border-left-color: var(--bs-primary);
+}
+
+/* Dialog System Styles */
+.smart-dialog-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.smart-dialog-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.smart-dialog {
+    background-color: var(--surface-bg, #ffffff);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    width: 500px;
+    max-width: 90%;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    transform: scale(0.9);
+    opacity: 0;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.smart-dialog-overlay.active .smart-dialog {
+    transform: scale(1);
+    opacity: 1;
+}
+
+/* Dialog Sizes */
+.dialog-sm {
+    width: 350px;
+}
+
+.dialog-lg {
+    width: 700px;
+}
+
+.dialog-fullscreen {
+    width: 95%;
+    height: 95vh;
+}
+
+/* Dialog Header */
+.dialog-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.dialog-title {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.dialog-close {
+    background: none;
+    border: none;
+    color: #999;
+    cursor: pointer;
+    font-size: 1.25rem;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+}
+
+.dialog-close:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+    color: #666;
+}
+
+/* Dialog Body */
+.dialog-body {
+    padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* Dialog Footer */
+.dialog-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 16px 20px;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* Prevent body scrolling when dialog is open */
+body.dialog-open {
+    overflow: hidden;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 576px) {
+    .notification-container {
+        top: 10px;
+        right: 10px;
+        left: 10px;
+        max-width: none;
+    }
+    
+    .notification {
+        width: 100%;
+    }
+    
+    .smart-dialog {
+        width: 95%;
+        max-height: 80vh;
+    }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+    .notification {
+        background-color: #2d2d2d;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    
+    .notification-message {
+        color: #e0e0e0;
+    }
+    
+    .notification-close {
+        color: #aaa;
+    }
+    
+    .notification-close:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+        color: #ddd;
+    }
+    
+    .smart-dialog {
+        background-color: #2d2d2d;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+    
+    .dialog-header {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .dialog-footer {
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .dialog-title {
+        color: #e0e0e0;
+    }
+}

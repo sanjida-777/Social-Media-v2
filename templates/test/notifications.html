@@ -1,0 +1,291 @@
+{% extends 'layout/base.html' %}
+
+{% block title %}Notification System Demo{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Smart Notification System Demo</h4>
+                </div>
+                <div class="card-body">
+                    <h5 class="card-title">Notifications</h5>
+                    <p class="card-text">
+                        Test our smart notification system with different types and options.
+                    </p>
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5>Basic Notifications</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="d-grid gap-2">
+                                        <button class="btn btn-success" onclick="notify.success('Operation completed successfully!')">
+                                            <i class="bi bi-check-circle me-2"></i> Success
+                                        </button>
+                                        <button class="btn btn-danger" onclick="notify.error('Something went wrong. Please try again.')">
+                                            <i class="bi bi-x-circle me-2"></i> Error
+                                        </button>
+                                        <button class="btn btn-warning" onclick="notify.warning('This action cannot be undone.')">
+                                            <i class="bi bi-exclamation-triangle me-2"></i> Warning
+                                        </button>
+                                        <button class="btn btn-info" onclick="notify.info('Your profile has been updated.')">
+                                            <i class="bi bi-info-circle me-2"></i> Info
+                                        </button>
+                                        <button class="btn btn-primary" onclick="notify.primary('You have a new message.')">
+                                            <i class="bi bi-bell me-2"></i> Primary
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5>Advanced Options</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="d-grid gap-2">
+                                        <button class="btn btn-outline-primary" onclick="notify.show({
+                                            type: 'success',
+                                            title: 'Profile Updated',
+                                            message: 'Your profile has been updated successfully.',
+                                            duration: 8000
+                                        })">
+                                            <i class="bi bi-gear me-2"></i> With Title
+                                        </button>
+                                        <button class="btn btn-outline-primary" onclick="notify.show({
+                                            type: 'info',
+                                            message: 'This notification will stay until you close it.',
+                                            duration: 0,
+                                            closable: true
+                                        })">
+                                            <i class="bi bi-pin me-2"></i> Persistent
+                                        </button>
+                                        <button class="btn btn-outline-primary" onclick="showMultipleNotifications()">
+                                            <i class="bi bi-stack me-2"></i> Multiple Notifications
+                                        </button>
+                                        <button class="btn btn-outline-danger" onclick="notify.clear()">
+                                            <i class="bi bi-trash me-2"></i> Clear All
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <h5 class="card-title mt-4">Dialog System</h5>
+                    <p class="card-text">
+                        Test our dialog system for more complex interactions.
+                    </p>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5>Basic Dialogs</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="d-grid gap-2">
+                                        <button class="btn btn-primary" onclick="dialog.alert('This is an alert message.')">
+                                            <i class="bi bi-exclamation-circle me-2"></i> Alert
+                                        </button>
+                                        <button class="btn btn-primary" onclick="dialog.confirm('Are you sure you want to proceed?', 'Confirmation', 
+                                            function() { notify.success('Action confirmed!'); }, 
+                                            function() { notify.info('Action cancelled.'); })">
+                                            <i class="bi bi-question-circle me-2"></i> Confirm
+                                        </button>
+                                        <button class="btn btn-primary" onclick="dialog.prompt('Please enter your name:', '', 'User Input', 
+                                            function(value) { notify.success('Hello, ' + value + '!'); })">
+                                            <i class="bi bi-input-cursor me-2"></i> Prompt
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5>Custom Dialogs</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="d-grid gap-2">
+                                        <button class="btn btn-outline-primary" onclick="showCustomDialog()">
+                                            <i class="bi bi-window me-2"></i> Custom Dialog
+                                        </button>
+                                        <button class="btn btn-outline-primary" onclick="showFormDialog()">
+                                            <i class="bi bi-ui-checks me-2"></i> Form Dialog
+                                        </button>
+                                        <button class="btn btn-outline-primary" onclick="showLargeDialog()">
+                                            <i class="bi bi-arrows-fullscreen me-2"></i> Large Dialog
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block additional_js %}
+<script>
+    // Function to show multiple notifications
+    function showMultipleNotifications() {
+        notify.info('Processing your request...');
+        
+        setTimeout(() => {
+            notify.success('Step 1 completed');
+            
+            setTimeout(() => {
+                notify.success('Step 2 completed');
+                
+                setTimeout(() => {
+                    notify.success('All steps completed successfully!', 'Process Complete');
+                }, 1000);
+            }, 1000);
+        }, 1000);
+    }
+    
+    // Function to show a custom dialog
+    function showCustomDialog() {
+        dialog.open({
+            title: 'Custom Dialog',
+            content: `
+                <div class="text-center mb-4">
+                    <i class="bi bi-stars text-warning" style="font-size: 3rem;"></i>
+                    <h4 class="mt-3">Welcome to SocialConnect!</h4>
+                    <p class="text-muted">Thank you for joining our community.</p>
+                </div>
+                <p>We're excited to have you here. Connect with friends, share your moments, and discover new content.</p>
+            `,
+            size: 'medium',
+            buttons: [
+                {
+                    text: 'Not Now',
+                    type: 'secondary',
+                    onClick: function() {
+                        notify.info('You can complete your profile later.');
+                        return true;
+                    }
+                },
+                {
+                    text: 'Complete Profile',
+                    type: 'primary',
+                    icon: 'bi-person-check',
+                    onClick: function() {
+                        notify.success('Redirecting to profile setup...');
+                        return true;
+                    }
+                }
+            ]
+        });
+    }
+    
+    // Function to show a form dialog
+    function showFormDialog() {
+        dialog.open({
+            title: 'Update Profile',
+            content: `
+                <form id="profile-form">
+                    <div class="mb-3">
+                        <label for="display-name" class="form-label">Display Name</label>
+                        <input type="text" class="form-control" id="display-name" value="John Doe">
+                    </div>
+                    <div class="mb-3">
+                        <label for="bio" class="form-label">Bio</label>
+                        <textarea class="form-control" id="bio" rows="3">Web developer and photography enthusiast.</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="location" class="form-label">Location</label>
+                        <input type="text" class="form-control" id="location" value="New York, USA">
+                    </div>
+                </form>
+            `,
+            size: 'medium',
+            buttons: [
+                {
+                    text: 'Cancel',
+                    type: 'secondary',
+                    onClick: function() {
+                        return true;
+                    }
+                },
+                {
+                    text: 'Save Changes',
+                    type: 'primary',
+                    icon: 'bi-check2',
+                    onClick: function() {
+                        const name = document.getElementById('display-name').value;
+                        notify.success(`Profile updated for ${name}!`);
+                        return true;
+                    }
+                }
+            ]
+        });
+    }
+    
+    // Function to show a large dialog
+    function showLargeDialog() {
+        dialog.open({
+            title: 'Terms of Service',
+            content: `
+                <div class="terms-content" style="max-height: 400px; overflow-y: auto;">
+                    <h5>1. Introduction</h5>
+                    <p>Welcome to SocialConnect. By using our platform, you agree to these Terms of Service. Please read them carefully.</p>
+                    
+                    <h5>2. Using Our Services</h5>
+                    <p>You must follow any policies made available to you within the Services. Don't misuse our Services. For example, don't interfere with our Services or try to access them using a method other than the interface and the instructions that we provide.</p>
+                    
+                    <h5>3. Privacy and Copyright Protection</h5>
+                    <p>Our privacy policies explain how we treat your personal data and protect your privacy when you use our Services. By using our Services, you agree that we can use such data in accordance with our privacy policies.</p>
+                    
+                    <h5>4. Your Content in our Services</h5>
+                    <p>Some of our Services allow you to upload, submit, store, send or receive content. You retain ownership of any intellectual property rights that you hold in that content. In short, what belongs to you stays yours.</p>
+                    
+                    <h5>5. Modifying and Terminating our Services</h5>
+                    <p>We are constantly changing and improving our Services. We may add or remove functionalities or features, and we may suspend or stop a Service altogether.</p>
+                    
+                    <h5>6. Our Warranties and Disclaimers</h5>
+                    <p>We provide our Services using a commercially reasonable level of skill and care and we hope that you will enjoy using them. But there are certain things that we don't promise about our Services.</p>
+                    
+                    <h5>7. Liability for our Services</h5>
+                    <p>When permitted by law, we, and our suppliers and distributors, will not be responsible for lost profits, revenues, or data, financial losses or indirect, special, consequential, exemplary, or punitive damages.</p>
+                    
+                    <h5>8. Business uses of our Services</h5>
+                    <p>If you are using our Services on behalf of a business, that business accepts these terms. It will hold harmless and indemnify us and our affiliates, officers, agents, and employees from any claim, suit or action arising from or related to the use of the Services.</p>
+                    
+                    <h5>9. About these Terms</h5>
+                    <p>We may modify these terms or any additional terms that apply to a Service to, for example, reflect changes to the law or changes to our Services.</p>
+                </div>
+            `,
+            size: 'large',
+            buttons: [
+                {
+                    text: 'Decline',
+                    type: 'secondary',
+                    onClick: function() {
+                        notify.warning('You must accept the Terms of Service to continue.');
+                        return true;
+                    }
+                },
+                {
+                    text: 'Accept',
+                    type: 'primary',
+                    onClick: function() {
+                        notify.success('Terms of Service accepted!');
+                        return true;
+                    }
+                }
+            ]
+        });
+    }
+</script>
+{% endblock %}

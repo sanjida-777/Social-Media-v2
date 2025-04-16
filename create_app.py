@@ -115,6 +115,9 @@ def create_app():
     import routes.story.create
     import routes.story.view
 
+    # Test routes
+    import routes.test.notifications
+
     # API routes
     import routes.api.user
     import routes.api.friends
