@@ -69,11 +69,28 @@
         <div class="feed-container">
             <h5 class="mb-3">Your Feed</h5>
 
-            <div class="feed-placeholder text-center py-5">
+            <!-- Posts will be loaded here -->
+            <div id="posts-container"></div>
+
+            <!-- Loading indicator -->
+            <div id="loading-indicator" class="text-center py-3 d-none">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2 text-muted">Loading posts...</p>
+            </div>
+
+            <!-- Empty feed placeholder -->
+            <div id="feed-placeholder" class="text-center py-5 d-none">
                 <i class="bi bi-newspaper fs-1 text-muted mb-3"></i>
                 <h4>Welcome to SocialConnect!</h4>
                 <p class="text-muted">Your feed is empty. Connect with friends to see their posts here.</p>
                 <a href="{{ url_for('auth.friends') }}" class="btn btn-primary mt-2">Find Friends</a>
+            </div>
+
+            <!-- Load more button -->
+            <div id="load-more-container" class="text-center py-3 d-none">
+                <button id="load-more-btn" class="btn btn-outline-primary">Load More</button>
             </div>
         </div>
     </div>
@@ -134,6 +151,8 @@
 
 {% block additional_js %}
 <script>
+// Set current user ID
+const currentUserId = {{ g.user.id }}; // Used for checking post ownership
 // Global variables for file uploads
 let postFiles = [];
 
@@ -273,15 +292,479 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Load feed when page loads
+    loadFeed();
+
+    // Add event listener to load more button
+    const loadMoreBtn = document.getElementById('load-more-btn');
+    if (loadMoreBtn) {
+        loadMoreBtn.addEventListener('click', () => {
+            currentPage++;
+            loadFeed(false); // Don't reset, just append
+        });
+    }
+
+    // Variables for pagination
+    let currentPage = 1;
+    let totalPages = 1;
+
     // Function to load feed
-    function loadFeed() {
-        const feedContainer = document.querySelector('.feed-container');
-        if (feedContainer) {
-            // In a real implementation, this would fetch posts from the server
-            console.log('Loading feed...');
-            // For now, just reload the page to see the new post
-            location.reload();
+    function loadFeed(reset = true) {
+        const postsContainer = document.getElementById('posts-container');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const feedPlaceholder = document.getElementById('feed-placeholder');
+        const loadMoreContainer = document.getElementById('load-more-container');
+
+        if (!postsContainer) return;
+
+        // Reset if needed
+        if (reset) {
+            postsContainer.innerHTML = '';
+            currentPage = 1;
         }
+
+        // Show loading indicator
+        loadingIndicator.classList.remove('d-none');
+        feedPlaceholder.classList.add('d-none');
+        loadMoreContainer.classList.add('d-none');
+
+        // Fetch posts from API
+        fetch(`/api/feed?page=${currentPage}&per_page=10`)
+            .then(response => response.json())
+            .then(data => {
+                // Hide loading indicator
+                loadingIndicator.classList.add('d-none');
+
+                if (data.success) {
+                    // Update pagination info
+                    totalPages = data.pagination.total_pages;
+
+                    // Show load more button if there are more pages
+                    if (currentPage < totalPages) {
+                        loadMoreContainer.classList.remove('d-none');
+                    } else {
+                        loadMoreContainer.classList.add('d-none');
+                    }
+
+                    // Check if there are posts
+                    if (data.posts.length === 0 && reset) {
+                        // Show empty feed placeholder
+                        feedPlaceholder.classList.remove('d-none');
+                        return;
+                    }
+
+                    // Render posts
+                    data.posts.forEach(post => {
+                        const postElement = createPostElement(post);
+                        postsContainer.appendChild(postElement);
+                    });
+                } else {
+                    console.error('Error loading feed:', data.error);
+                    // Show error message
+                    postsContainer.innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                            Error loading feed. Please try again later.
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                loadingIndicator.classList.add('d-none');
+                // Show error message
+                postsContainer.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        Error loading feed. Please try again later.
+                    </div>
+                `;
+            });
+    }
+
+    // Function to create a post element
+    function createPostElement(post) {
+        const postElement = document.createElement('div');
+        postElement.className = 'card mb-3 post';
+        postElement.dataset.postId = post.id;
+
+        // Format date
+        const postDate = new Date(post.created_at);
+        const formattedDate = postDate.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
+        // Create post header
+        let postHeader = `
+            <div class="card-header">
+                <div class="d-flex align-items-center">
+                    <img src="${post.profile_pic}" alt="${post.author}" class="avatar-mini me-2">
+                    <div>
+                        <h6 class="mb-0">${post.author}</h6>
+                        <small class="text-muted">${formattedDate}</small>
+                    </div>
+                    <div class="dropdown ms-auto">
+                        <button class="btn btn-sm btn-link text-muted" type="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-three-dots-vertical"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+        `;
+
+        // Add post actions based on ownership
+        if (post.user_id === currentUserId) {
+            postHeader += `
+                <li><a class="dropdown-item" href="#" onclick="deletePost(${post.id}); return false;"><i class="bi bi-trash me-2"></i> Delete</a></li>
+                <li><a class="dropdown-item" href="#"><i class="bi bi-pencil me-2"></i> Edit</a></li>
+            `;
+        } else {
+            postHeader += `
+                <li><a class="dropdown-item" href="#"><i class="bi bi-flag me-2"></i> Report</a></li>
+            `;
+        }
+
+        postHeader += `
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Create post body
+        let postBody = `
+            <div class="card-body">
+                <p class="card-text">${post.content}</p>
+        `;
+
+        // Add media if any
+        if (post.media && post.media.length > 0) {
+            if (post.media.length === 1) {
+                // Single image
+                postBody += `
+                    <div class="post-media mb-3">
+                        <img src="${post.media[0]}" alt="Post media" class="img-fluid rounded">
+                    </div>
+                `;
+            } else {
+                // Multiple images
+                postBody += `<div class="post-media-grid mb-3">`;
+                post.media.forEach(mediaUrl => {
+                    postBody += `
+                        <div class="post-media-item">
+                            <img src="${mediaUrl}" alt="Post media" class="img-fluid rounded">
+                        </div>
+                    `;
+                });
+                postBody += `</div>`;
+            }
+        }
+
+        // Add post actions
+        const likeButtonClass = post.liked_by_user ? 'text-primary' : 'text-muted';
+        postBody += `
+                <div class="d-flex justify-content-between align-items-center mt-3">
+                    <div>
+                        <button class="btn btn-sm btn-link ${likeButtonClass}" onclick="toggleLike(${post.id}, this)">
+                            <i class="bi bi-hand-thumbs-up-fill me-1"></i>
+                            <span class="like-count">${post.like_count}</span> Likes
+                        </button>
+                        <button class="btn btn-sm btn-link text-muted" onclick="focusComment(${post.id})">
+                            <i class="bi bi-chat-fill me-1"></i>
+                            <span class="comment-count">${post.comment_count}</span> Comments
+                        </button>
+                    </div>
+                    <button class="btn btn-sm btn-link text-muted">
+                        <i class="bi bi-share-fill me-1"></i> Share
+                    </button>
+                </div>
+            </div>
+        `;
+
+        // Create comment section
+        let commentSection = `
+            <div class="card-footer bg-white">
+                <div class="d-flex mb-3">
+                    <img src="{{ g.user.profile_pic }}" alt="{{ g.user.username }}" class="avatar-mini me-2">
+                    <div class="flex-grow-1">
+                        <div class="input-group">
+                            <input type="text" class="form-control comment-input" placeholder="Write a comment..." data-post-id="${post.id}">
+                            <button class="btn btn-primary" onclick="addComment(${post.id})">Post</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="comments-container" id="comments-${post.id}">
+                    <!-- Comments will be loaded here -->
+                </div>
+                <div class="text-center mt-2">
+                    <button class="btn btn-sm btn-link" onclick="loadComments(${post.id})">View all comments</button>
+                </div>
+            </div>
+        `;
+
+        // Combine all parts
+        postElement.innerHTML = postHeader + postBody + commentSection;
+        return postElement;
+    }
+
+    // Function to toggle like on a post
+    function toggleLike(postId, button) {
+        const likeCount = button.querySelector('.like-count');
+        const isLiked = button.classList.contains('text-primary');
+
+        // Optimistically update UI
+        if (isLiked) {
+            button.classList.remove('text-primary');
+            button.classList.add('text-muted');
+            likeCount.textContent = parseInt(likeCount.textContent) - 1;
+        } else {
+            button.classList.remove('text-muted');
+            button.classList.add('text-primary');
+            likeCount.textContent = parseInt(likeCount.textContent) + 1;
+        }
+
+        // Send request to server
+        const endpoint = isLiked ? `/api/posts/${postId}/unlike` : `/api/posts/${postId}/like`;
+        fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (!data.success) {
+                // Revert UI changes if request failed
+                if (isLiked) {
+                    button.classList.remove('text-muted');
+                    button.classList.add('text-primary');
+                    likeCount.textContent = parseInt(likeCount.textContent) + 1;
+                } else {
+                    button.classList.remove('text-primary');
+                    button.classList.add('text-muted');
+                    likeCount.textContent = parseInt(likeCount.textContent) - 1;
+                }
+                console.error('Error toggling like:', data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            // Revert UI changes if request failed
+            if (isLiked) {
+                button.classList.remove('text-muted');
+                button.classList.add('text-primary');
+                likeCount.textContent = parseInt(likeCount.textContent) + 1;
+            } else {
+                button.classList.remove('text-primary');
+                button.classList.add('text-muted');
+                likeCount.textContent = parseInt(likeCount.textContent) - 1;
+            }
+        });
+    }
+
+    // Function to focus on comment input
+    function focusComment(postId) {
+        const commentInput = document.querySelector(`.comment-input[data-post-id="${postId}"]`);
+        if (commentInput) {
+            commentInput.focus();
+        }
+    }
+
+    // Function to add a comment
+    function addComment(postId) {
+        const commentInput = document.querySelector(`.comment-input[data-post-id="${postId}"]`);
+        if (!commentInput) return;
+
+        const content = commentInput.value.trim();
+        if (!content) return;
+
+        // Clear input
+        commentInput.value = '';
+
+        // Send request to server
+        fetch(`/api/posts/${postId}/comments`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ content })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update comment count
+                const commentCount = document.querySelector(`.post[data-post-id="${postId}"] .comment-count`);
+                if (commentCount) {
+                    commentCount.textContent = parseInt(commentCount.textContent) + 1;
+                }
+
+                // Load comments
+                loadComments(postId);
+            } else {
+                console.error('Error adding comment:', data.message);
+                alert('Error adding comment: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while adding your comment.');
+        });
+    }
+
+    // Function to load comments
+    function loadComments(postId) {
+        const commentsContainer = document.getElementById(`comments-${postId}`);
+        if (!commentsContainer) return;
+
+        // Show loading indicator
+        commentsContainer.innerHTML = `
+            <div class="text-center py-2">
+                <div class="spinner-border spinner-border-sm text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        `;
+
+        // Fetch comments from API
+        fetch(`/api/posts/${postId}/comments`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Check if there are comments
+                    if (data.comments.length === 0) {
+                        commentsContainer.innerHTML = `
+                            <div class="text-center py-2">
+                                <p class="text-muted small mb-0">No comments yet</p>
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    // Render comments
+                    commentsContainer.innerHTML = '';
+                    data.comments.forEach(comment => {
+                        const commentElement = createCommentElement(comment);
+                        commentsContainer.appendChild(commentElement);
+                    });
+                } else {
+                    console.error('Error loading comments:', data.message);
+                    commentsContainer.innerHTML = `
+                        <div class="text-center py-2">
+                            <p class="text-danger small mb-0">Error loading comments</p>
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                commentsContainer.innerHTML = `
+                    <div class="text-center py-2">
+                        <p class="text-danger small mb-0">Error loading comments</p>
+                    </div>
+                `;
+            });
+    }
+
+    // Function to create a comment element
+    function createCommentElement(comment) {
+        const commentElement = document.createElement('div');
+        commentElement.className = 'comment mb-2';
+        commentElement.dataset.commentId = comment.id;
+
+        // Format date
+        const commentDate = new Date(comment.created_at);
+        const formattedDate = commentDate.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
+        commentElement.innerHTML = `
+            <div class="d-flex">
+                <img src="${comment.profile_pic}" alt="${comment.author}" class="avatar-mini me-2">
+                <div class="flex-grow-1">
+                    <div class="comment-bubble">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <h6 class="mb-0 small">${comment.author}</h6>
+                            <small class="text-muted">${formattedDate}</small>
+                        </div>
+                        <p class="mb-0 small">${comment.content}</p>
+                    </div>
+                    <div class="comment-actions small mt-1">
+                        <a href="#" class="text-muted me-3">Like</a>
+                        <a href="#" class="text-muted me-3">Reply</a>
+                        ${comment.user_id === currentUserId ? `<a href="#" class="text-muted" onclick="deleteComment(${comment.id}); return false;">Delete</a>` : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+
+        return commentElement;
+    }
+
+    // Function to delete a post
+    function deletePost(postId) {
+        if (!confirm('Are you sure you want to delete this post?')) return;
+
+        fetch(`/api/posts/${postId}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Remove post from DOM
+                const postElement = document.querySelector(`.post[data-post-id="${postId}"]`);
+                if (postElement) {
+                    postElement.remove();
+                }
+            } else {
+                console.error('Error deleting post:', data.message);
+                alert('Error deleting post: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while deleting the post.');
+        });
+    }
+
+    // Function to delete a comment
+    function deleteComment(commentId) {
+        if (!confirm('Are you sure you want to delete this comment?')) return;
+
+        fetch(`/api/comments/${commentId}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Remove comment from DOM
+                const commentElement = document.querySelector(`.comment[data-comment-id="${commentId}"]`);
+                if (commentElement) {
+                    // Get post ID
+                    const postId = commentElement.closest('.post').dataset.postId;
+
+                    // Update comment count
+                    const commentCount = document.querySelector(`.post[data-post-id="${postId}"] .comment-count`);
+                    if (commentCount) {
+                        commentCount.textContent = Math.max(0, parseInt(commentCount.textContent) - 1);
+                    }
+
+                    // Remove comment
+                    commentElement.remove();
+                }
+            } else {
+                console.error('Error deleting comment:', data.message);
+                alert('Error deleting comment: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while deleting the comment.');
+        });
     }
 });
 </script>

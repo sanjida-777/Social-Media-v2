@@ -220,6 +220,64 @@ body {
   margin-top: 3rem;
 }
 
+/* Post styling */
+.post {
+  margin-bottom: 1.5rem;
+}
+
+.post .card-text {
+  white-space: pre-line;
+}
+
+.post-media img {
+  max-height: 500px;
+  width: 100%;
+  object-fit: contain;
+}
+
+.post-media-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 5px;
+}
+
+.post-media-grid.grid-3 {
+  grid-template-areas:
+    "img1 img2"
+    "img1 img3";
+}
+
+.post-media-grid.grid-3 .post-media-item:first-child {
+  grid-area: img1;
+}
+
+.post-media-grid.grid-4 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.post-media-item img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+}
+
+/* Comment styling */
+.comment-bubble {
+  background-color: var(--surface-bg);
+  border-radius: 18px;
+  padding: 8px 12px;
+  position: relative;
+}
+
+.comment-actions {
+  padding-left: 12px;
+}
+
+.comment-actions a {
+  text-decoration: none;
+  font-size: 0.75rem;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .container {
@@ -228,6 +286,18 @@ body {
 
   .cover-photo {
     height: 150px;
+  }
+
+  .post-media-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .post-media-grid.grid-3 {
+    grid-template-areas: unset;
+  }
+
+  .post-media-item img {
+    height: 180px;
   }
 }
 
