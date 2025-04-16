@@ -1,4 +1,4 @@
-/* 
+/*
  * Smart Notification System Styles
  * Modern, clean design for notifications and dialogs
  */
@@ -123,21 +123,23 @@
     border-left-color: var(--bs-primary);
 }
 
-/* Dialog System Styles */
+/* Dialog System Styles - Anime Inspired */
 .smart-dialog-overlay {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
+    background-color: rgba(0, 0, 0, 0.7);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 9999;
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.3s ease, visibility 0.3s ease;
+    transition: opacity 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55), visibility 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
 }
 
 .smart-dialog-overlay.active {
@@ -147,21 +149,109 @@
 
 .smart-dialog {
     background-color: var(--surface-bg, #ffffff);
-    border-radius: 8px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    border-radius: 12px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3), 0 0 15px rgba(0, 123, 255, 0.2);
     width: 500px;
     max-width: 90%;
     max-height: 90vh;
     display: flex;
     flex-direction: column;
-    transform: scale(0.9);
+    transform: scale(0.7) translateY(30px);
     opacity: 0;
-    transition: transform 0.3s ease, opacity 0.3s ease;
+    transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .smart-dialog-overlay.active .smart-dialog {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+}
+
+/* Dialog animation styles */
+.dialog-anime-fade .smart-dialog {
+    transform: scale(1) translateY(0);
+    opacity: 0;
+}
+
+.dialog-anime-fade.active .smart-dialog {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+}
+
+.dialog-anime-slide-up .smart-dialog {
+    transform: scale(1) translateY(100px);
+    opacity: 0;
+}
+
+.dialog-anime-slide-up.active .smart-dialog {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+}
+
+.dialog-anime-slide-down .smart-dialog {
+    transform: scale(1) translateY(-100px);
+    opacity: 0;
+}
+
+.dialog-anime-slide-down.active .smart-dialog {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+}
+
+.dialog-anime-flip .smart-dialog {
+    transform: perspective(1200px) rotateX(-90deg);
+    opacity: 0;
+    transform-origin: top center;
+}
+
+.dialog-anime-flip.active .smart-dialog {
+    transform: perspective(1200px) rotateX(0);
+    opacity: 1;
+}
+
+.dialog-anime-zoom .smart-dialog {
+    transform: scale(1.5);
+    opacity: 0;
+}
+
+.dialog-anime-zoom.active .smart-dialog {
     transform: scale(1);
     opacity: 1;
+}
+
+.dialog-anime-rotate .smart-dialog {
+    transform: rotate(-15deg) scale(0.7);
+    opacity: 0;
+}
+
+.dialog-anime-rotate.active .smart-dialog {
+    transform: rotate(0) scale(1);
+    opacity: 1;
+}
+
+.dialog-anime-shake .smart-dialog {
+    transform: scale(0.9);
+    opacity: 0;
+}
+
+.dialog-anime-shake.active .smart-dialog {
+    transform: scale(1);
+    opacity: 1;
+    animation: dialog-shake 0.6s cubic-bezier(.36,.07,.19,.97) both;
+}
+
+@keyframes dialog-shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+    20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+/* Button press animation */
+.btn-pressed {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 rgba(0, 123, 255, 0.4) !important;
+    transition: transform 0.1s, box-shadow 0.1s !important;
 }
 
 /* Dialog Sizes */
@@ -178,19 +268,43 @@
     height: 95vh;
 }
 
-/* Dialog Header */
+/* Dialog Header - Anime Style */
 .dialog-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 16px 20px;
     border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%);
+    position: relative;
+    overflow: hidden;
+}
+
+.dialog-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transform: translateX(-100%);
+    animation: dialog-header-shine 3s infinite;
+}
+
+@keyframes dialog-header-shine {
+    0% { transform: translateX(-100%); }
+    20% { transform: translateX(100%); }
+    100% { transform: translateX(100%); }
 }
 
 .dialog-title {
     margin: 0;
     font-size: 1.25rem;
     font-weight: 600;
+    text-shadow: 0 0 10px rgba(0, 123, 255, 0.3);
+    position: relative;
+    z-index: 1;
 }
 
 .dialog-close {
@@ -203,31 +317,92 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
-    transition: background-color 0.2s;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    position: relative;
+    overflow: hidden;
+    z-index: 1;
 }
 
 .dialog-close:hover {
-    background-color: rgba(0, 0, 0, 0.05);
-    color: #666;
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    transform: rotate(90deg);
+}
+
+.dialog-close::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: -1;
+}
+
+.dialog-close:hover::before {
+    opacity: 1;
 }
 
 /* Dialog Body */
 .dialog-body {
-    padding: 20px;
+    padding: 24px;
     overflow-y: auto;
     flex: 1;
+    position: relative;
+    background-color: var(--surface-bg, #ffffff);
+    z-index: 1;
 }
 
 /* Dialog Footer */
 .dialog-footer {
     display: flex;
     justify-content: flex-end;
-    gap: 10px;
+    gap: 12px;
     padding: 16px 20px;
     border-top: 1px solid rgba(0, 0, 0, 0.1);
+    background: linear-gradient(135deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.05) 100%);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Anime-style buttons */
+.dialog-footer .btn {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 1;
+}
+
+.dialog-footer .btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transform: translateX(-100%);
+    transition: transform 0.5s ease;
+    z-index: -1;
+}
+
+.dialog-footer .btn:hover::before {
+    transform: translateX(100%);
+}
+
+.dialog-footer .btn-primary {
+    box-shadow: 0 0 15px rgba(0, 123, 255, 0.4);
+}
+
+.dialog-footer .btn-primary:hover {
+    box-shadow: 0 0 20px rgba(0, 123, 255, 0.6);
+    transform: translateY(-2px);
 }
 
 /* Prevent body scrolling when dialog is open */
@@ -243,11 +418,11 @@ body.dialog-open {
         left: 10px;
         max-width: none;
     }
-    
+
     .notification {
         width: 100%;
     }
-    
+
     .smart-dialog {
         width: 95%;
         max-height: 80vh;
@@ -260,33 +435,33 @@ body.dialog-open {
         background-color: #2d2d2d;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     }
-    
+
     .notification-message {
         color: #e0e0e0;
     }
-    
+
     .notification-close {
         color: #aaa;
     }
-    
+
     .notification-close:hover {
         background-color: rgba(255, 255, 255, 0.1);
         color: #ddd;
     }
-    
+
     .smart-dialog {
         background-color: #2d2d2d;
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
     }
-    
+
     .dialog-header {
         border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     }
-    
+
     .dialog-footer {
         border-top: 1px solid rgba(255, 255, 255, 0.1);
     }
-    
+
     .dialog-title {
         color: #e0e0e0;
     }
