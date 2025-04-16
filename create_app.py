@@ -89,6 +89,7 @@ def create_app():
     from routes.api import api_bp  # Import the main API blueprint
     from routes.profile import profile_bp
     from routes.chat import chat_bp
+    from routes.test import test_bp
 
     # Import route modules to register routes with blueprints
     # Auth routes
@@ -102,6 +103,13 @@ def create_app():
     # Main routes
     import routes.main.index
     import routes.main.messages
+
+    # Feed routes
+    import routes.feed.posts
+
+    # Story routes
+    import routes.story.create
+    import routes.story.view
 
     # API routes
     import routes.api.user
@@ -121,6 +129,7 @@ def create_app():
     app.register_blueprint(api_bp)  # This registers all API routes
     app.register_blueprint(profile_bp)
     app.register_blueprint(chat_bp)
+    app.register_blueprint(test_bp)
 
     # Import Firebase utilities
     from utils.firebase import get_firebase_config_for_client
