@@ -347,7 +347,7 @@ const feedModule = (function() {
 
   // Handle like/unlike action
   function handleLikeAction(btn, postId) {
-    fetch(`/api/posts/${postId}/like`, {
+    fetch(`/api/post/${postId}/like`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -607,7 +607,62 @@ const feedModule = (function() {
 
   // Create a new post
   function createPost(formData) {
-    return fetch('/post/create', {
+    // Check if there are files to upload
+    const files = formData.getAll('media');
+    const content = formData.get('content');
+
+    // If no files, just submit the form normally
+    if (!files || files.length === 0 || !files[0].size) {
+      return submitPostForm(formData);
+    }
+
+    // Show loading indicator
+    notify.info('Uploading images...', 'Please wait');
+
+    // Upload each file and collect the URLs
+    const uploadPromises = [];
+    const mediaUrls = [];
+
+    for (const file of files) {
+      if (file.size > 0) {
+        uploadPromises.push(
+          UploadModule.uploadImage(file, { silent: true })
+            .then(result => {
+              if (result.success) {
+                mediaUrls.push(result.url);
+              } else {
+                throw new Error(result.error || 'Upload failed');
+              }
+            })
+        );
+      }
+    }
+
+    // Wait for all uploads to complete
+    return Promise.all(uploadPromises)
+      .then(() => {
+        // Create a new FormData with the content and media URLs
+        const newFormData = new FormData();
+        newFormData.append('content', content);
+
+        // Add each media URL
+        mediaUrls.forEach(url => {
+          newFormData.append('media_urls[]', url);
+        });
+
+        // Submit the form with the media URLs
+        return submitPostForm(newFormData);
+      })
+      .catch(error => {
+        console.error('Error uploading images:', error);
+        notify.error('Error uploading images: ' + error.message);
+        throw error;
+      });
+  }
+
+  // Submit post form to the server
+  function submitPostForm(formData) {
+    return fetch('/api/posts', {
       method: 'POST',
       body: formData
     })
@@ -635,10 +690,16 @@ const feedModule = (function() {
             const img = entry.target;
             const src = img.getAttribute('data-src');
 
-            if (src) {
+            if (src && src !== 'undefined') {
               img.src = src;
               img.removeAttribute('data-src');
               img.classList.remove('lazy-load');
+            } else {
+              // Set a placeholder for invalid sources
+              img.src = '/static/img/placeholder.png';
+              img.removeAttribute('data-src');
+              img.classList.remove('lazy-load');
+              img.classList.add('placeholder-img');
             }
 
             observer.unobserve(img);
@@ -656,10 +717,16 @@ const feedModule = (function() {
       const lazyImages = document.querySelectorAll('img[data-src]');
       lazyImages.forEach(img => {
         const src = img.getAttribute('data-src');
-        if (src) {
+        if (src && src !== 'undefined') {
           img.src = src;
           img.removeAttribute('data-src');
           img.classList.remove('lazy-load');
+        } else {
+          // Set a placeholder for invalid sources
+          img.src = '/static/img/placeholder.png';
+          img.removeAttribute('data-src');
+          img.classList.remove('lazy-load');
+          img.classList.add('placeholder-img');
         }
       });
     }

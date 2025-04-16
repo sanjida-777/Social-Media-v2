@@ -1,7 +1,11 @@
 import logging
-from flask import jsonify, request, g
+import os
+from flask import jsonify, request, g, url_for
 from models import User, Post, Friend, Follower
+from database import db
 from routes.api import api_bp
+from utils.upload import save_photo
+from routes.auth_old import login_required
 
 # Set up logger
 logger = logging.getLogger(__name__)
@@ -152,3 +156,61 @@ def get_profile(username=None):
             'success': False,
             'error': 'An error occurred while getting profile data'
         }), 500
+        
+@api_bp.route('/profile/upload_profile_pic', methods=['POST'])
+@login_required
+def upload_profile_pic():
+    if 'profile_pic' not in request.files:
+        return jsonify({'error': 'No file uploaded'}), 400
+
+    profile_pic = request.files['profile_pic']
+
+    if profile_pic.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+
+    media_path = save_photo(profile_pic)
+    if not media_path:
+        return jsonify({'error': 'Invalid file type'}), 400
+        
+    # Check if the media_path is already a full URL (from external services)
+    if media_path.startswith(('http://', 'https://')):
+        g.user.profile_pic = media_path
+    else:
+        # For local files, don't use url_for to avoid host/static prefix
+        g.user.profile_pic = media_path
+
+    db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'profile_pic': g.user.profile_pic
+    })
+    
+@api_bp.route('/profile/upload_cover_pic', methods=['POST'])
+@login_required
+def upload_cover_pic():
+    if 'cover_pic' not in request.files:
+        return jsonify({'error': 'No file uploaded'}), 400
+
+    cover_pic = request.files['cover_pic']
+
+    if cover_pic.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+
+    media_path = save_photo(cover_pic)
+    if not media_path:
+        return jsonify({'error': 'Invalid file type'}), 400
+        
+    # Check if the media_path is already a full URL (from external services)
+    if media_path.startswith(('http://', 'https://')):
+        g.user.cover_pic = media_path
+    else:
+        # For local files, don't use url_for to avoid host/static prefix
+        g.user.cover_pic = media_path
+
+    db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'cover_pic': g.user.cover_pic
+    })

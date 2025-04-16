@@ -116,7 +116,12 @@ def create_post():
                     media_path = save_photo(media_file)
                     if not media_path:
                         continue
-                    media_url = url_for('static', filename=media_path)
+                    # Check if the media_path is already a full URL (from external services)
+                    if media_path.startswith(('http://', 'https://')):
+                        media_url = media_path
+                    else:
+                        # For local files, don't use url_for to avoid host/static prefix
+                        media_url = media_path
                     post_media = PostMedia(
                         post_id=post.id,
                         media_type='image',

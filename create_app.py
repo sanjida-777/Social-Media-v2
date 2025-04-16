@@ -140,18 +140,15 @@ def create_app():
     app.register_blueprint(chat_bp)
     app.register_blueprint(test_bp)
 
-    # Import Firebase utilities
-    from utils.firebase import get_firebase_config_for_client
-
-    # Create template context processor to inject Firebase config
+    # No Firebase configuration is injected into templates
+    # We're using server-side authentication only
     @app.context_processor
     def inject_firebase_config():
         """
-        Add Firebase configuration to all templates
-        This is more secure than hardcoding values in JavaScript files
+        Add empty Firebase configuration to maintain compatibility
         """
         return {
-            'firebase_config': get_firebase_config_for_client()
+            'firebase_config': None
         }
 
     @app.before_request

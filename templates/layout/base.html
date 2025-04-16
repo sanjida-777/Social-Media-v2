@@ -17,67 +17,17 @@
     <!-- Additional CSS for specific pages -->
     {% block additional_css %}{% endblock %}
 
-    <!-- Firebase Core JS SDK -->
-    <script type="module">
-        // Firebase configuration from the server
-        const firebaseConfig = {{ firebase_config|tojson|safe if firebase_config else '{}' }};
-
-        // Global variable to check if Firebase is available
+    <!-- Authentication Status -->
+    <script>
+        // Global variable to check if Firebase is available - always returns false now
         window.isFirebaseInitialized = function() {
-            return typeof firebase !== 'undefined' && firebase.apps.length > 0;
+            return false; // Always use local authentication
         };
-
-        // Load Firebase only if config is available
-        if (firebaseConfig && firebaseConfig.apiKey) {
-            // Import Firebase modules
-            import('https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js').then(module => {
-                window.firebase = module;
-                firebase.initializeApp(firebaseConfig);
-
-                // Import Firebase Auth
-                import('https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js').then(authModule => {
-                    // Set up auth state change listener
-                    const auth = authModule.getAuth();
-                    authModule.onAuthStateChanged(auth, user => {
-                        if (user) {
-                            // User is signed in, get ID token
-                            user.getIdToken().then(token => {
-                                // Send token to server to create session
-                                fetch('/auth/api/session', {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json',
-                                    },
-                                    body: JSON.stringify({ token: token }),
-                                })
-                                .then(response => response.json())
-                                .then(data => {
-                                    if (data.success) {
-                                        // Redirect to home page
-                                        window.location.href = '/';
-                                    }
-                                })
-                                .catch(error => {
-                                    console.error('Error creating session:', error);
-                                });
-                            });
-                        }
-                    });
-
-                    // Make Firebase Auth available globally
-                    window.FirebaseAuth = authModule;
-                });
-
-                console.log('Firebase initialized successfully');
-
-                // Fire event for other scripts that depend on Firebase
-                document.dispatchEvent(new Event('firebaseReady'));
-            }).catch(error => {
-                console.error('Firebase initialization error:', error);
-            });
-        } else {
-            console.warn('Firebase configuration not available');
-        }
+        
+        // Fire event for scripts that depend on auth being ready
+        document.addEventListener('DOMContentLoaded', function() {
+            document.dispatchEvent(new Event('authReady'));
+        });
     </script>
 </head>
 <body>
@@ -321,16 +271,17 @@
     <!-- Additional JavaScript for specific pages -->
     {% block additional_js %}{% endblock %}
 
+    <!-- Socket.IO Client -->
+    <script src="https://cdn.socket.io/4.6.0/socket.io.min.js" integrity="sha384-c79GN5VsunZvi+Q/WObgk2in0CbZsHnjEqvFxC5DxHn9lTfNce2WW6h2pH6u/kF+" crossorigin="anonymous"></script>
+    
     <!-- Common JavaScript -->
     <script src="{{ url_for('static', filename='js/utils.js') }}"></script>
     <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/upload.js') }}"></script>
     <script src="{{ url_for('static', filename='js/profile.js') }}"></script>
     <script src="{{ url_for('static', filename='js/feed.js') }}"></script>
     <script src="{{ url_for('static', filename='js/story.js') }}"></script>
     <script src="{{ url_for('static', filename='js/realtime.js') }}"></script>
-
-    <!-- Socket.IO Client -->
-    <script src="https://cdn.socket.io/4.6.0/socket.io.min.js" integrity="sha384-c79GN5VsunZvi+Q/WObgk2in0CbZsHnjEqvFxC5DxHn9lTfNce2WW6h2pH6u/kF+" crossorigin="anonymous"></script>
 
     <!-- Extra scripts -->
     {% block extra_scripts %}{% endblock %}

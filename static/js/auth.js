@@ -1,6 +1,6 @@
 /**
  * Authentication functionality for the social media platform
- * Supports both Firebase and local fallback authentication
+ * Uses server-side authentication only
  */
 
 // Track authentication state
@@ -14,112 +14,6 @@ const registerForm = document.getElementById('register-form');
 const logoutButton = document.getElementById('logout-button');
 const authMessage = document.getElementById('auth-message');
 const userProfileSection = document.getElementById('user-profile');
-
-/**
- * Initialize Firebase Auth UI
- * Uses Firebase UI for a nicer authentication experience
- */
-function setupFirebaseAuthUI() {
-  try {
-    // Check if Firebase is available and initialized
-    if (typeof firebase === 'undefined') {
-      console.error('Firebase SDK not loaded');
-      setupLocalAuth();
-      return;
-    }
-
-    if (!isFirebaseInitialized()) {
-      console.warn('Firebase not initialized, using local auth');
-      setupLocalAuth();
-      return;
-    }
-
-    // Initialize Firebase UI if available
-    if (typeof firebaseui !== 'undefined') {
-      const ui = new firebaseui.auth.AuthUI(firebase.auth());
-      ui.start('#firebaseui-auth-container', {
-        signInOptions: [
-          firebase.auth.EmailAuthProvider.PROVIDER_ID,
-          firebase.auth.GoogleAuthProvider.PROVIDER_ID
-        ],
-        signInSuccessUrl: '/',
-        tosUrl: '/terms',
-        privacyPolicyUrl: '/privacy'
-      });
-
-      // Listen for auth state changes
-      firebase.auth().onAuthStateChanged(handleAuthStateChange);
-      authInitialized = true;
-    } else {
-      console.warn('Firebase UI not loaded, using basic auth');
-      setupBasicFirebaseAuth();
-    }
-  } catch (error) {
-    console.error('Error setting up Firebase Auth UI:', error);
-    setupLocalAuth();
-  }
-}
-
-/**
- * Setup basic Firebase auth without UI library
- */
-function setupBasicFirebaseAuth() {
-  // Listen for auth state changes
-  firebase.auth().onAuthStateChanged(handleAuthStateChange);
-
-  // Set up login form
-  if (loginForm) {
-    loginForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const email = loginForm.querySelector('[name="email"]').value;
-      const password = loginForm.querySelector('[name="password"]').value;
-
-      try {
-        showAuthMessage('Logging in...', 'info');
-        await login(email, password);
-      } catch (error) {
-        showAuthMessage(`Login failed: ${error.message}`, 'error');
-      }
-    });
-  }
-
-  // Set up register form
-  if (registerForm) {
-    registerForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const email = registerForm.querySelector('[name="email"]').value;
-      const username = registerForm.querySelector('[name="username"]').value;
-      const password = registerForm.querySelector('[name="password"]').value;
-      const confirmPassword = registerForm.querySelector('[name="password-confirm"]').value;
-
-      if (password !== confirmPassword) {
-        showAuthMessage('Passwords do not match', 'error');
-        return;
-      }
-
-      try {
-        showAuthMessage('Creating account...', 'info');
-        await register(email, password, username);
-      } catch (error) {
-        showAuthMessage(`Registration failed: ${error.message}`, 'error');
-      }
-    });
-  }
-
-  // Set up logout button
-  if (logoutButton) {
-    logoutButton.addEventListener('click', async () => {
-      try {
-        await logout();
-        location.href = '/login';
-      } catch (error) {
-        showAuthMessage(`Logout failed: ${error.message}`, 'error');
-      }
-    });
-  }
-
-  authInitialized = true;
-}
 
 /**
  * Setup local authentication (no Firebase)
@@ -209,7 +103,7 @@ function setupLocalAuth() {
 
 /**
  * Handle authentication state changes
- * @param {Object} user - User object from Firebase or local auth
+ * @param {Object} user - User object from local auth
  */
 function handleAuthStateChange(user) {
   currentUser = user;
@@ -224,27 +118,6 @@ function handleAuthStateChange(user) {
     // Update profile section if it exists
     if (userProfileSection) {
       updateUserProfile(user);
-    }
-
-    // Send the Firebase token to the backend to create a session
-    if (typeof firebase !== 'undefined' && isFirebaseInitialized()) {
-      firebase.auth().currentUser.getIdToken(true)
-        .then(token => {
-          return fetch('/api/auth/session', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ token }),
-          });
-        })
-        .then(response => response.json())
-        .then(data => {
-          console.log('Session created:', data);
-        })
-        .catch(error => {
-          console.error('Error creating session:', error);
-        });
     }
   } else {
     console.log('User is signed out');
@@ -370,20 +243,6 @@ function isLoggedIn() {
 
 // Initialize auth when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-  // Check if Firebase is available
-  if (typeof firebase !== 'undefined') {
-    // Try to initialize Firebase first
-    setTimeout(() => {
-      if (isFirebaseInitialized()) {
-        console.log('Using Firebase authentication');
-        setupFirebaseAuthUI();
-      } else {
-        console.log('Firebase not initialized, using local authentication');
-        setupLocalAuth();
-      }
-    }, 1000); // Wait for Firebase to initialize
-  } else {
-    console.log('Firebase not available, using local authentication');
-    setupLocalAuth();
-  }
+  console.log('Using local authentication only');
+  setupLocalAuth();
 });

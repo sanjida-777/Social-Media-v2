@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime
-from flask import session, request
-from flask_socketio import emit, join_room, leave_room
+from flask import session, request, g
+from flask_socketio import emit, join_room, leave_room, disconnect
 
 # Import shared socketio instance
 from socket_instance import socketio
@@ -20,47 +20,135 @@ def init_socketio(app):
 @socketio.on('connect')
 def handle_connect():
     """Handle client connection"""
-    client_id = session.get('user_id')
-    if not client_id:
-        logger.warning("Unauthenticated connection attempt")
-        return False
-
-    logger.info(f"Client connected: {client_id}")
-    connected_clients[client_id] = request.sid
-
-    # Join user's personal room
-    join_room(f"user_{client_id}")
-
-    # Acknowledge connection
-    emit('connected', {'status': 'connected', 'timestamp': datetime.now().isoformat()})
+    logger.info(f"Client connected: {request.sid}")
+    
+    # Always allow connection, authentication will happen later
+    emit('connected', {
+        'status': 'connected', 
+        'authenticated': False,
+        'timestamp': datetime.now().isoformat()
+    })
+    
+    return True
 
 @socketio.on('disconnect')
 def handle_disconnect():
     """Handle client disconnection"""
-    client_id = session.get('user_id')
-    if client_id and client_id in connected_clients:
-        logger.info(f"Client disconnected: {client_id}")
-        del connected_clients[client_id]
+    logger.info(f"Client disconnected: {request.sid}")
+    
+    # Find user_id by socket id
+    user_id = None
+    for uid, sid in connected_clients.items():
+        if sid == request.sid:
+            user_id = uid
+            break
+    
+    if user_id:
+        logger.info(f"Authenticated client disconnected: {user_id}")
+        del connected_clients[user_id]
 
-        # Leave user's personal room
-        leave_room(f"user_{client_id}")
+        # Update user's online status
+        try:
+            from models import User
+            from database import db
+            
+            user = User.query.get(user_id)
+            if user:
+                user.is_active = False
+                user.last_online = datetime.now()
+                db.session.commit()
+
+                # Broadcast user's offline status
+                emit('user_status', {
+                    'user_id': user.id,
+                    'username': user.username,
+                    'status': 'offline'
+                }, broadcast=True)
+        except Exception as e:
+            logger.error(f"Error updating user status on disconnect: {str(e)}")
 
 @socketio.on('auth')
 def handle_auth(data):
     """Handle client authentication"""
-    client_id = session.get('user_id')
-    if not client_id:
-        logger.warning("Authentication failed: No user_id in session")
+    logger.info(f"Auth request received from {request.sid}")
+    
+    # Get user ID from session
+    user_id = session.get('user_id')
+    if not user_id:
+        logger.warning(f"Authentication failed: No user_id in session for {request.sid}")
         emit('auth_response', {'status': 'error', 'message': 'Authentication failed'})
         return
 
-    logger.info(f"Client authenticated: {client_id}")
-    emit('auth_response', {'status': 'success', 'user_id': client_id})
+    try:
+        # Get user from database
+        from models import User
+        from database import db
+        
+        user = User.query.get(user_id)
+        if not user:
+            logger.warning(f"Authentication failed: User {user_id} not found in database")
+            emit('auth_response', {'status': 'error', 'message': 'User not found'})
+            return
+
+        # Store client connection
+        connected_clients[user_id] = request.sid
+        
+        # Join user's personal room
+        room_name = f"user_{user_id}"
+        join_room(room_name)
+        logger.info(f"Client {request.sid} joined room: {room_name}")
+
+        # Update user's online status
+        user.is_active = True
+        user.last_online = datetime.now()
+        db.session.commit()
+
+        # Broadcast user's online status
+        emit('user_status', {
+            'user_id': user.id,
+            'username': user.username,
+            'status': 'online'
+        }, broadcast=True)
+
+        # Send success response
+        logger.info(f"Client authenticated: {user_id} ({user.username})")
+        emit('auth_response', {
+            'status': 'success', 
+            'user_id': user_id,
+            'username': user.username
+        })
+    except Exception as e:
+        logger.error(f"Error during authentication: {str(e)}")
+        emit('auth_response', {'status': 'error', 'message': f'Server error: {str(e)}'})
 
 @socketio.on('error')
 def handle_error(error):
     """Handle WebSocket errors"""
     logger.error(f"WebSocket error: {error}")
+
+@socketio.on('message')
+def handle_message(data):
+    """Handle generic messages"""
+    logger.info(f"Message received from {request.sid}: {data}")
+    
+    # Find user_id by socket id
+    user_id = None
+    for uid, sid in connected_clients.items():
+        if sid == request.sid:
+            user_id = uid
+            break
+    
+    if not user_id:
+        logger.warning(f"Message from unauthenticated client: {request.sid}")
+        return
+    
+    # Process message based on type
+    if isinstance(data, dict) and 'type' in data:
+        logger.info(f"Processing message of type: {data['type']}")
+        # Add processing logic here if needed
+    
+    # Echo back for testing
+    emit('message', {'echo': data, 'timestamp': datetime.now().isoformat()})
 
 def send_to_user(user_id, event_type, data):
     """Send event to a specific user"""

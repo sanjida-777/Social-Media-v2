@@ -292,9 +292,15 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Variables for pagination
+    let currentPage = 1;
+    let totalPages = 1;
+    
+
+    
     // Load feed when page loads
     loadFeed();
-
+    
     // Add event listener to load more button
     const loadMoreBtn = document.getElementById('load-more-btn');
     if (loadMoreBtn) {
@@ -303,10 +309,6 @@ document.addEventListener('DOMContentLoaded', function() {
             loadFeed(false); // Don't reset, just append
         });
     }
-
-    // Variables for pagination
-    let currentPage = 1;
-    let totalPages = 1;
 
     // Function to load feed
     function loadFeed(reset = true) {

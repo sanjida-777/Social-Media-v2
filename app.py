@@ -17,7 +17,10 @@ app = create_app()
 Session(app)
 
 # Initialize SocketIO with the app
-socketio.init_app(app)
+socketio.init_app(app, cors_allowed_origins="*")
+
+# Log that SocketIO has been initialized
+logger.info("SocketIO initialized with app")
 
 # Blueprints are registered in create_app.py
 # Routes are organized in modular structure under routes/ directory
