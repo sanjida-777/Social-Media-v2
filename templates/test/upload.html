@@ -1,0 +1,336 @@
+{% extends 'layout/base.html' %}
+
+{% block title %}Image Upload Demo{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Image Upload Demo</h4>
+                </div>
+                <div class="card-body">
+                    <h5 class="card-title">Upload Images to External Services</h5>
+                    <p class="card-text">
+                        Test our image upload functionality that uses external services like Imgur, Catbox, etc.
+                    </p>
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5>Basic Upload</h5>
+                                </div>
+                                <div class="card-body">
+                                    <form id="basic-upload-form" class="mb-3">
+                                        <div class="mb-3">
+                                            <label for="image-file" class="form-label">Select Image</label>
+                                            <input type="file" class="form-control" id="image-file" accept="image/*">
+                                        </div>
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="bi bi-upload me-2"></i> Upload Image
+                                        </button>
+                                    </form>
+                                    
+                                    <div id="upload-result" class="mt-3" style="display: none;">
+                                        <div class="alert alert-success">
+                                            <p><strong>Upload Successful!</strong></p>
+                                            <p>Image URL: <a href="#" id="image-url" target="_blank"></a></p>
+                                            <p>Service: <span id="image-service"></span></p>
+                                        </div>
+                                        <div class="mt-3">
+                                            <img id="preview-image" class="img-fluid rounded" style="max-height: 300px;">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5>Advanced Options</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div id="service-list" class="mb-3">
+                                        <p><strong>Available Services:</strong></p>
+                                        <div class="d-flex flex-wrap gap-2" id="service-buttons">
+                                            <div class="spinner-border spinner-border-sm" role="status">
+                                                <span class="visually-hidden">Loading...</span>
+                                            </div>
+                                            <span>Loading available services...</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">Upload with Preview</label>
+                                        <div class="input-group">
+                                            <input type="text" class="form-control" id="preview-url" placeholder="Image URL" readonly>
+                                            <button class="btn btn-outline-secondary" type="button" id="select-image-btn">
+                                                <i class="bi bi-image me-1"></i> Select
+                                            </button>
+                                        </div>
+                                        <input type="file" id="preview-file" class="d-none" accept="image/*" data-upload="image" data-target="#preview-url" data-preview="#preview-container">
+                                        <div id="preview-container" class="mt-3 border rounded p-2 text-center" style="min-height: 200px; display: flex; align-items: center; justify-content: center;">
+                                            <span class="text-muted">Preview will appear here</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <h5 class="card-title mt-4">Create Post with Images</h5>
+                    <div class="card">
+                        <div class="card-body">
+                            <form id="post-form" class="mb-3">
+                                <div class="mb-3">
+                                    <label for="post-content" class="form-label">Post Content</label>
+                                    <textarea class="form-control" id="post-content" rows="3" placeholder="What's on your mind?"></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="post-images" class="form-label">Add Images</label>
+                                    <input type="file" class="form-control" id="post-images" multiple accept="image/*">
+                                    <div class="form-text">You can select multiple images (max 5)</div>
+                                </div>
+                                <div id="post-preview" class="mb-3 d-flex flex-wrap gap-2" style="display: none !important;">
+                                    <!-- Image previews will be added here -->
+                                </div>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-send me-2"></i> Create Post
+                                </button>
+                            </form>
+                            
+                            <div id="post-result" class="mt-3" style="display: none;">
+                                <div class="alert alert-success">
+                                    <p><strong>Post Created Successfully!</strong></p>
+                                    <p>Post ID: <span id="post-id"></span></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block additional_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Get available services
+        fetchAvailableServices();
+        
+        // Basic upload form
+        const basicUploadForm = document.getElementById('basic-upload-form');
+        basicUploadForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const fileInput = document.getElementById('image-file');
+            if (!fileInput.files || fileInput.files.length === 0) {
+                notify.error('Please select an image to upload');
+                return;
+            }
+            
+            const file = fileInput.files[0];
+            uploadImage(file);
+        });
+        
+        // Select image button
+        const selectImageBtn = document.getElementById('select-image-btn');
+        selectImageBtn.addEventListener('click', function() {
+            document.getElementById('preview-file').click();
+        });
+        
+        // Post form with images
+        const postForm = document.getElementById('post-form');
+        const postImagesInput = document.getElementById('post-images');
+        const postPreview = document.getElementById('post-preview');
+        
+        // Show image previews when files are selected
+        postImagesInput.addEventListener('change', function() {
+            postPreview.innerHTML = '';
+            
+            if (this.files && this.files.length > 0) {
+                postPreview.style.display = 'flex';
+                
+                // Limit to 5 images
+                const maxFiles = Math.min(this.files.length, 5);
+                
+                for (let i = 0; i < maxFiles; i++) {
+                    const file = this.files[i];
+                    const reader = new FileReader();
+                    
+                    reader.onload = function(e) {
+                        const previewItem = document.createElement('div');
+                        previewItem.className = 'position-relative';
+                        previewItem.innerHTML = `
+                            <img src="${e.target.result}" class="img-thumbnail" style="width: 100px; height: 100px; object-fit: cover;">
+                            <button type="button" class="btn-close position-absolute top-0 end-0 bg-danger text-white" 
+                                style="font-size: 0.7rem; padding: 0.2rem;" data-index="${i}"></button>
+                        `;
+                        
+                        // Add remove button functionality
+                        const removeBtn = previewItem.querySelector('.btn-close');
+                        removeBtn.addEventListener('click', function() {
+                            previewItem.remove();
+                            
+                            // If no more previews, hide the container
+                            if (postPreview.children.length === 0) {
+                                postPreview.style.display = 'none';
+                            }
+                        });
+                        
+                        postPreview.appendChild(previewItem);
+                    };
+                    
+                    reader.readAsDataURL(file);
+                }
+                
+                // Show warning if more than 5 files selected
+                if (this.files.length > 5) {
+                    notify.warning('Only the first 5 images will be uploaded');
+                }
+            } else {
+                postPreview.style.display = 'none';
+            }
+        });
+        
+        // Handle post form submission
+        postForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const content = document.getElementById('post-content').value.trim();
+            const files = postImagesInput.files;
+            
+            if (!content && (!files || files.length === 0)) {
+                notify.error('Please enter some content or add images');
+                return;
+            }
+            
+            // Create FormData
+            const formData = new FormData();
+            formData.append('content', content);
+            
+            // Add files
+            if (files && files.length > 0) {
+                const maxFiles = Math.min(files.length, 5);
+                for (let i = 0; i < maxFiles; i++) {
+                    formData.append('media', files[i]);
+                }
+            }
+            
+            // Show loading
+            notify.info('Creating post...', 'Please wait');
+            
+            // Submit the form using feedModule
+            feedModule.createPost(formData)
+                .then(data => {
+                    if (data.success) {
+                        // Show success message
+                        document.getElementById('post-id').textContent = data.post_id;
+                        document.getElementById('post-result').style.display = 'block';
+                        
+                        // Clear form
+                        postForm.reset();
+                        postPreview.innerHTML = '';
+                        postPreview.style.display = 'none';
+                        
+                        notify.success('Post created successfully!');
+                    } else {
+                        throw new Error(data.message || 'Error creating post');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error creating post:', error);
+                    notify.error('Error creating post: ' + error.message);
+                });
+        });
+    });
+    
+    // Fetch available upload services
+    function fetchAvailableServices() {
+        fetch('/api/uploads/services')
+            .then(response => response.json())
+            .then(data => {
+                const serviceButtons = document.getElementById('service-buttons');
+                serviceButtons.innerHTML = '';
+                
+                if (data.success && data.services && data.services.length > 0) {
+                    data.services.forEach(service => {
+                        const button = document.createElement('button');
+                        button.className = 'btn btn-sm btn-outline-primary';
+                        button.textContent = service;
+                        button.addEventListener('click', function() {
+                            // Get the file from the basic upload form
+                            const fileInput = document.getElementById('image-file');
+                            if (!fileInput.files || fileInput.files.length === 0) {
+                                notify.error('Please select an image first');
+                                return;
+                            }
+                            
+                            // Upload to the selected service
+                            uploadImage(fileInput.files[0], service);
+                        });
+                        
+                        serviceButtons.appendChild(button);
+                    });
+                } else {
+                    serviceButtons.innerHTML = '<div class="alert alert-warning">No upload services available</div>';
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching services:', error);
+                const serviceButtons = document.getElementById('service-buttons');
+                serviceButtons.innerHTML = '<div class="alert alert-danger">Error loading services</div>';
+            });
+    }
+    
+    // Upload an image
+    function uploadImage(file, service = null) {
+        // Check file type
+        if (!file.type.match('image.*')) {
+            notify.error('Please select an image file');
+            return;
+        }
+        
+        // Create FormData
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        // Add service if specified
+        if (service) {
+            formData.append('service', service);
+        }
+        
+        // Show loading
+        notify.info('Uploading image...', 'Please wait');
+        
+        // Upload the image
+        fetch('/api/uploads/image', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.url) {
+                // Show success message
+                document.getElementById('image-url').href = data.url;
+                document.getElementById('image-url').textContent = data.url;
+                document.getElementById('image-service').textContent = data.service;
+                document.getElementById('preview-image').src = data.url;
+                document.getElementById('upload-result').style.display = 'block';
+                
+                notify.success('Image uploaded successfully!');
+            } else {
+                throw new Error(data.error || 'Upload failed');
+            }
+        })
+        .catch(error => {
+            console.error('Error uploading image:', error);
+            notify.error('Error uploading image: ' + error.message);
+        });
+    }
+</script>
+{% endblock %}

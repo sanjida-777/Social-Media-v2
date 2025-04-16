@@ -132,24 +132,47 @@ def create_post():
 
         # Handle media uploads if any
         media_urls = []
+
+        # Check for media files in the request
         if 'media' in request.files:
             files = request.files.getlist('media')
             for file in files:
                 if file and file.filename:
-                    # Upload to external services
-                    urls = save_multi_uploads(file)
-                    if urls:
-                        # Use the first successful URL
-                        media_url = urls[0]
-                        media_urls.append(media_url)
+                    try:
+                        # Use our image upload utility
+                        from utils.image_upload import upload_image
+                        result = upload_image(file, file.filename)
 
-                        # Create post media entry
-                        media = PostMedia(
-                            post_id=post.id,
-                            media_type='image',
-                            media_url=media_url
-                        )
-                        db.session.add(media)
+                        if result['success']:
+                            media_url = result['url']
+                            media_urls.append(media_url)
+
+                            # Create post media entry
+                            media = PostMedia(
+                                post_id=post.id,
+                                media_type='image',
+                                media_url=media_url
+                            )
+                            db.session.add(media)
+                        else:
+                            logger.warning(f"Failed to upload image: {result.get('error')}")
+                    except Exception as e:
+                        logger.error(f"Error uploading image: {str(e)}")
+
+        # Check for media URLs in the form data
+        if 'media_urls[]' in request.form:
+            urls = request.form.getlist('media_urls[]')
+            for url in urls:
+                if url:
+                    media_urls.append(url)
+
+                    # Create post media entry
+                    media = PostMedia(
+                        post_id=post.id,
+                        media_type='image',
+                        media_url=url
+                    )
+                    db.session.add(media)
 
         # Commit changes
         db.session.commit()

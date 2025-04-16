@@ -117,6 +117,7 @@ def create_app():
 
     # Test routes
     import routes.test.notifications
+    import routes.test.upload
 
     # API routes
     import routes.api.user
@@ -126,6 +127,7 @@ def create_app():
     import routes.api.profile
     import routes.api.search
     import routes.api.stories
+    import routes.api.uploads
 
     # Register all blueprints
     app.register_blueprint(auth_bp)
