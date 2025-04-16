@@ -55,12 +55,10 @@
                     </div>
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <button type="button" class="btn btn-sm btn-outline-light me-2">
+                            <button type="button" class="btn btn-sm btn-outline-light me-2" onclick="document.getElementById('postImageUpload').click()">
                                 <i class="bi bi-image"></i> Photo
                             </button>
-                            <button type="button" class="btn btn-sm btn-outline-light">
-                                <i class="bi bi-camera-video"></i> Video
-                            </button>
+                            <input type="file" id="postImageUpload" style="display: none" multiple accept="image/*" onchange="handleImageUpload(event)">
                         </div>
                         <button type="submit" class="btn btn-primary">Post</button>
                     </div>
@@ -72,10 +70,10 @@
             <h5 class="mb-3">Your Feed</h5>
 
             <div class="feed-placeholder text-center py-5">
+                <i class="bi bi-newspaper fs-1 text-muted mb-3"></i>
                 <h4>Welcome to SocialConnect!</h4>
-                <p class="text-muted">Your feed will show posts from friends and people you follow.</p>
-                <p>Start by adding friends or following interesting profiles.</p>
-                <a href="{{ url_for('auth.friends') }}" class="btn btn-outline-primary mt-2">Find Friends</a>
+                <p class="text-muted">Your feed is empty. Connect with friends to see their posts here.</p>
+                <a href="{{ url_for('auth.friends') }}" class="btn btn-primary mt-2">Find Friends</a>
             </div>
         </div>
     </div>
@@ -136,6 +134,54 @@
 
 {% block additional_js %}
 <script>
+// Global variables for file uploads
+let postFiles = [];
+
+// Handle image upload for posts
+function handleImageUpload(event) {
+    const files = event.target.files;
+    if (!files.length) return;
+
+    // Limit to 5 images
+    if (files.length > 5) {
+        alert('You can upload a maximum of 5 images per post');
+        return;
+    }
+
+    // Check file sizes (limit to 5MB each)
+    const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+    for (const file of files) {
+        if (file.size > MAX_FILE_SIZE) {
+            alert(`File ${file.name} is too large. Maximum size is 5MB per image.`);
+            return;
+        }
+    }
+
+    // Store files for later upload
+    postFiles = Array.from(files);
+
+    // Add file info to the form
+    const fileInfo = document.createElement('div');
+    fileInfo.id = 'file-info';
+    fileInfo.className = 'mt-2 small text-muted';
+    fileInfo.innerHTML = `Selected ${files.length} image(s) - Will be uploaded to Imgur/Catbox`;
+
+    // Remove existing file info if any
+    const existingInfo = document.getElementById('file-info');
+    if (existingInfo) existingInfo.remove();
+
+    // Add to form
+    document.getElementById('new-post-form').appendChild(fileInfo);
+}
+
+// Clear image uploads
+function clearImageUploads() {
+    postFiles = [];
+    const fileInfo = document.getElementById('file-info');
+    if (fileInfo) fileInfo.remove();
+    document.getElementById('postImageUpload').value = '';
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     const newPostForm = document.getElementById('new-post-form');
     if (newPostForm) {
@@ -143,50 +189,98 @@ document.addEventListener('DOMContentLoaded', function() {
             event.preventDefault();
             const content = document.getElementById('post-content').value;
 
-            if (content.trim()) {
+            if (content.trim() || postFiles.length > 0) {
                 // Display loading state
                 const submitBtn = this.querySelector('button[type="submit"]');
                 const originalText = submitBtn.innerHTML;
                 submitBtn.innerHTML = 'Posting...';
                 submitBtn.disabled = true;
 
-                // Submit post
-                fetch('/api/posts', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ content: content }),
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // Clear form and reload feed
-                        document.getElementById('post-content').value = '';
-                        loadFeed();
-                    } else {
-                        alert('Error creating post: ' + data.message);
+                // Create form data for files
+                const formData = new FormData();
+                formData.append('content', content);
+
+                if (postFiles.length > 0) {
+                    // Show upload message
+                    const statusMsg = document.createElement('div');
+                    statusMsg.className = 'alert alert-info mt-2';
+                    statusMsg.innerHTML = `Uploading ${postFiles.length} image(s) to Imgur/Catbox... This may take a moment.`;
+                    newPostForm.appendChild(statusMsg);
+
+                    for (let i = 0; i < postFiles.length; i++) {
+                        formData.append('media', postFiles[i]);
                     }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('An error occurred while creating your post.');
-                })
-                .finally(() => {
-                    // Restore button
-                    submitBtn.innerHTML = originalText;
-                    submitBtn.disabled = false;
-                });
+
+                    // Submit post with files
+                    fetch('/api/posts', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Clear form and reload feed
+                            document.getElementById('post-content').value = '';
+                            clearImageUploads();
+                            loadFeed();
+                        } else {
+                            alert('Error creating post: ' + (data.message || 'Unknown error'));
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('An error occurred while creating your post.');
+                    })
+                    .finally(() => {
+                        // Restore button
+                        submitBtn.innerHTML = originalText;
+                        submitBtn.disabled = false;
+
+                        // Remove status message if it exists
+                        const statusMsg = document.querySelector('#new-post-form .alert');
+                        if (statusMsg) statusMsg.remove();
+                    });
+                } else {
+                    // Submit post without files (text only)
+                    fetch('/api/posts', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ content: content }),
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Clear form and reload feed
+                            document.getElementById('post-content').value = '';
+                            loadFeed();
+                        } else {
+                            alert('Error creating post: ' + (data.message || 'Unknown error'));
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('An error occurred while creating your post.');
+                    })
+                    .finally(() => {
+                        // Restore button
+                        submitBtn.innerHTML = originalText;
+                        submitBtn.disabled = false;
+                    });
+                }
             }
         });
     }
 
-    // Placeholder function to load feed
+    // Function to load feed
     function loadFeed() {
         const feedContainer = document.querySelector('.feed-container');
         if (feedContainer) {
             // In a real implementation, this would fetch posts from the server
             console.log('Loading feed...');
+            // For now, just reload the page to see the new post
+            location.reload();
         }
     }
 });
