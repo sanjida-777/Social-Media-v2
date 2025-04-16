@@ -1,24 +1,21 @@
-import json
 import logging
-import asyncio
 from datetime import datetime
-from flask import session
-from flask_socketio import SocketIO, emit, join_room, leave_room
+from flask import session, request
+from flask_socketio import emit, join_room, leave_room
+
+# Import shared socketio instance
+from socket_instance import socketio
 
 # Set up logger
 logger = logging.getLogger(__name__)
-
-# Initialize SocketIO
-socketio = SocketIO()
 
 # Connected clients
 connected_clients = {}
 
 def init_socketio(app):
-    """Initialize SocketIO with the Flask app"""
-    socketio.init_app(app, cors_allowed_origins="*", async_mode='eventlet')
-    logger.info("WebSocket server initialized")
-    return socketio
+    """Initialize SocketIO handlers"""
+    logger.info("WebSocket handlers initialized")
+    return True
 
 @socketio.on('connect')
 def handle_connect():
@@ -27,13 +24,13 @@ def handle_connect():
     if not client_id:
         logger.warning("Unauthenticated connection attempt")
         return False
-    
+
     logger.info(f"Client connected: {client_id}")
     connected_clients[client_id] = request.sid
-    
+
     # Join user's personal room
     join_room(f"user_{client_id}")
-    
+
     # Acknowledge connection
     emit('connected', {'status': 'connected', 'timestamp': datetime.now().isoformat()})
 
@@ -44,7 +41,7 @@ def handle_disconnect():
     if client_id and client_id in connected_clients:
         logger.info(f"Client disconnected: {client_id}")
         del connected_clients[client_id]
-        
+
         # Leave user's personal room
         leave_room(f"user_{client_id}")
 
@@ -56,7 +53,7 @@ def handle_auth(data):
         logger.warning("Authentication failed: No user_id in session")
         emit('auth_response', {'status': 'error', 'message': 'Authentication failed'})
         return
-    
+
     logger.info(f"Client authenticated: {client_id}")
     emit('auth_response', {'status': 'success', 'user_id': client_id})
 
@@ -82,26 +79,26 @@ def broadcast_to_friends(user_id, event_type, data, friends_list=None):
         if not friends_list:
             # Import here to avoid circular imports
             from models import Friend
-            
+
             # Get user's friends
             friends = Friend.query.filter_by(status='accepted').filter(
                 (Friend.user_id == user_id) | (Friend.friend_id == user_id)
             ).all()
-            
+
             friends_list = []
             for friend in friends:
                 if friend.user_id == user_id:
                     friends_list.append(friend.friend_id)
                 else:
                     friends_list.append(friend.user_id)
-        
+
         # Send to each friend
         for friend_id in friends_list:
             send_to_user(friend_id, event_type, data)
-        
+
         # Also send to the user themselves
         send_to_user(user_id, event_type, data)
-        
+
         logger.debug(f"Broadcast {event_type} to {len(friends_list)} friends of user {user_id}")
         return True
     except Exception as e:
@@ -129,14 +126,14 @@ def notify_new_comment(comment_id, post_id, user_id, author_name, post_author_id
         'author': author_name,
         'timestamp': datetime.now().isoformat()
     }
-    
+
     # Send to post author
     send_to_user(post_author_id, 'message', data)
-    
+
     # Also send to the commenter if different from post author
     if user_id != post_author_id:
         send_to_user(user_id, 'message', data)
-    
+
     return True
 
 def notify_new_like(post_id, user_id, post_author_id, like_count):
@@ -148,8 +145,8 @@ def notify_new_like(post_id, user_id, post_author_id, like_count):
         'like_count': like_count,
         'timestamp': datetime.now().isoformat()
     }
-    
+
     # Send to post author
     send_to_user(post_author_id, 'message', data)
-    
+
     return True

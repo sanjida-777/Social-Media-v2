@@ -1,9 +1,11 @@
 import logging
-from flask_socketio import SocketIO
 from flask_session import Session
 
 # Import the create_app function
 from create_app import create_app
+
+# Import shared SocketIO instance
+from socket_instance import socketio
 
 # Set up logger
 logger = logging.getLogger(__name__)
@@ -14,8 +16,8 @@ app = create_app()
 # Initialize Flask-Session
 Session(app)
 
-# Initialize SocketIO for real-time features
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
+# Initialize SocketIO with the app
+socketio.init_app(app)
 
 # Blueprints are registered in create_app.py
 # Routes are organized in modular structure under routes/ directory
