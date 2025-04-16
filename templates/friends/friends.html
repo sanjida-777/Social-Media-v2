@@ -48,11 +48,11 @@
                                 <div class="fw-bold">{{ suggestion.username }}</div>
                                 <small class="text-muted">{% if suggestion.mutual_friends > 0 %}<strong>{{ suggestion.mutual_friends }} mutual friend{% if suggestion.mutual_friends > 1 %}s{% endif %}</strong>{% else %}No mutual friends{% endif %}</small>
                             </div>
-                            <div class="dropdown">
-                                <button class="btn btn-sm btn-primary" type="button" id="suggestionMenu{{ suggestion.id }}" data-bs-toggle="dropdown" aria-expanded="false">
+                            <div class="dropdown friend-menu-dropdown">
+                                <button class="btn btn-sm btn-primary" type="button" id="suggestionMenu{{ suggestion.id }}" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
                                     <i class="bi bi-three-dots-vertical"></i>
                                 </button>
-                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="suggestionMenu{{ suggestion.id }}">
+                                <ul class="dropdown-menu dropdown-menu-top" aria-labelledby="suggestionMenu{{ suggestion.id }}">
                                     <li><a class="dropdown-item" href="{{ url_for('auth.profile', username=suggestion.username) }}"><i class="bi bi-person me-2"></i>View Profile</a></li>
                                     <li><a class="dropdown-item" href="#" onclick="sendFriendRequest({{ suggestion.id }}); return false;"><i class="bi bi-person-plus me-2"></i>Add Friend</a></li>
                                 </ul>
@@ -90,11 +90,11 @@
                                                 <h5 class="mb-1">{{ friend.username }}</h5>
                                                 <p class="text-muted mb-0 small">{{ 'Online' if friend.is_active else 'Last seen ' + friend.last_online|humanize }}</p>
                                             </div>
-                                            <div class="dropdown">
-                                                <button class="btn btn-sm btn-outline-primary" type="button" id="friendMenu{{ friend.id }}" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <div class="dropdown friend-menu-dropdown">
+                                                <button class="btn btn-sm btn-outline-primary" type="button" id="friendMenu{{ friend.id }}" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
                                                     <i class="bi bi-three-dots-vertical"></i>
                                                 </button>
-                                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="friendMenu{{ friend.id }}">
+                                                <ul class="dropdown-menu dropdown-menu-top" aria-labelledby="friendMenu{{ friend.id }}">
                                                     <li><a class="dropdown-item" href="{{ url_for('auth.profile', username=friend.username) }}"><i class="bi bi-person me-2"></i>View Profile</a></li>
                                                     <li><a class="dropdown-item" href="{{ url_for('auth.messages', username=friend.username) }}"><i class="bi bi-chat me-2"></i>Send Message</a></li>
                                                     <li><a class="dropdown-item" href="#"><i class="bi bi-bell me-2"></i>Notifications</a></li>
@@ -147,6 +147,29 @@
                 });
             });
         }
+
+        // Initialize dropdowns with custom behavior
+        const dropdownMenus = document.querySelectorAll('.friend-menu-dropdown .dropdown-menu');
+        dropdownMenus.forEach(menu => {
+            // Prevent clicks inside dropdown from closing it
+            menu.addEventListener('click', function(e) {
+                e.stopPropagation();
+            });
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            const dropdowns = document.querySelectorAll('.friend-menu-dropdown.show');
+            dropdowns.forEach(dropdown => {
+                if (!dropdown.contains(e.target)) {
+                    const btn = dropdown.querySelector('.btn');
+                    const bsDropdown = bootstrap.Dropdown.getInstance(btn);
+                    if (bsDropdown) {
+                        bsDropdown.hide();
+                    }
+                }
+            });
+        });
     });
 
     // Friend request functions
