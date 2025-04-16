@@ -347,7 +347,7 @@ const feedModule = (function() {
 
   // Handle like/unlike action
   function handleLikeAction(btn, postId) {
-    fetch(`/api/post/${postId}/like`, {
+    fetch(`/api/posts/${postId}/like`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -406,7 +406,7 @@ const feedModule = (function() {
     // Show loading
     commentsList.innerHTML = '<div class="text-center"><div class="spinner-border spinner-border-sm" role="status"></div></div>';
 
-    fetch(`/api/post/${postId}/comments`)
+    fetch(`/api/posts/${postId}/comments`)
       .then(response => response.json())
       .then(data => {
         if (data.comments.length === 0) {
@@ -462,7 +462,7 @@ const feedModule = (function() {
 
   // Submit a new comment
   function submitComment(postId, comment, form) {
-    fetch(`/api/post/${postId}/comment`, {
+    fetch(`/api/posts/${postId}/comments`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -528,8 +528,8 @@ const feedModule = (function() {
 
   // Delete a post
   function deletePost(postId) {
-    fetch(`/api/post/${postId}/delete`, {
-      method: 'POST',
+    fetch(`/api/posts/${postId}`, {
+      method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
       }
