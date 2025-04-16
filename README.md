@@ -89,6 +89,11 @@ social-media-app/
 │   │   ├── search.py       # Search API endpoints
 │   │   ├── stories.py      # Stories API endpoints
 │   │   └── user.py         # User API endpoints
+│   ├── chat/               # Chat routes
+│   │   ├── __init__.py     # Chat blueprint initialization
+│   │   ├── messages.py     # Chat message functionality
+│   │   ├── groups.py       # Chat group management
+│   │   └── realtime.py     # Real-time chat functionality
 │   ├── auth/               # Authentication routes
 │   │   ├── __init__.py     # Auth blueprint initialization
 │   │   ├── friends.py      # Friend management routes
