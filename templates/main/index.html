@@ -11,11 +11,11 @@
         padding: 10px 5px;
         scrollbar-width: none; /* For Firefox */
     }
-    
+
     .story-carousel::-webkit-scrollbar {
         display: none; /* For Chrome, Safari, and Opera */
     }
-    
+
     .story-item {
         position: relative;
         min-width: 120px;
@@ -26,17 +26,17 @@
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         transition: transform 0.3s ease;
     }
-    
+
     .story-item:hover {
         transform: translateY(-5px);
     }
-    
+
     .story-item img {
         width: 100%;
         height: 100%;
         object-fit: cover;
     }
-    
+
     .story-info {
         position: absolute;
         bottom: 0;
@@ -46,7 +46,7 @@
         background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
         color: white;
     }
-    
+
     .story-avatar {
         position: absolute;
         top: 10px;
@@ -57,7 +57,7 @@
         border: 3px solid var(--bs-primary);
         background-color: #fff;
     }
-    
+
     .create-story {
         position: relative;
         background-color: var(--bs-dark);
@@ -66,7 +66,7 @@
         justify-content: flex-end;
         align-items: center;
     }
-    
+
     .create-story-button {
         position: absolute;
         top: 50%;
@@ -82,53 +82,53 @@
         justify-content: center;
         align-items: center;
     }
-    
+
     .post-card {
         margin-bottom: 20px;
         border-radius: 10px;
         overflow: hidden;
     }
-    
+
     .post-header {
         display: flex;
         align-items: center;
         padding: 12px 15px;
     }
-    
+
     .post-avatar {
         width: 40px;
         height: 40px;
         border-radius: 50%;
         margin-right: 10px;
     }
-    
+
     .post-meta {
         flex-grow: 1;
     }
-    
+
     .post-username {
         font-weight: bold;
         margin-bottom: 0;
     }
-    
+
     .post-time {
         font-size: 0.8rem;
         color: var(--bs-secondary-color);
     }
-    
+
     .post-content {
         padding: 0 15px 15px;
     }
-    
+
     .post-text {
         margin-bottom: 15px;
     }
-    
+
     .post-images {
         position: relative;
         margin-bottom: 15px;
     }
-    
+
     .post-image-grid {
         display: grid;
         grid-template-columns: 1fr;
@@ -136,34 +136,34 @@
         border-radius: 8px;
         overflow: hidden;
     }
-    
+
     .post-image-grid.grid-2 {
         grid-template-columns: 1fr 1fr;
     }
-    
+
     .post-image-grid.grid-3 {
         grid-template-columns: 1fr 1fr;
         grid-template-rows: 1fr 1fr;
     }
-    
+
     .post-image-grid.grid-3 .post-image:first-child {
         grid-row: span 2;
     }
-    
+
     .post-image-grid.grid-4 {
         grid-template-columns: 1fr 1fr;
         grid-template-rows: 1fr 1fr;
     }
-    
+
     .post-image-grid.grid-5 {
         grid-template-columns: 2fr 1fr 1fr;
         grid-template-rows: 1fr 1fr;
     }
-    
+
     .post-image-grid.grid-5 .post-image:first-child {
         grid-row: span 2;
     }
-    
+
     .post-image {
         width: 100%;
         height: 0;
@@ -172,7 +172,7 @@
         background-position: center;
         position: relative;
     }
-    
+
     .post-image img {
         width: 100%;
         height: 100%;
@@ -181,13 +181,13 @@
         top: 0;
         left: 0;
     }
-    
+
     .post-actions {
         display: flex;
         justify-content: space-between;
         padding: 0 15px 15px;
     }
-    
+
     .post-action-btn {
         background: none;
         border: none;
@@ -197,32 +197,32 @@
         display: flex;
         align-items: center;
     }
-    
+
     .post-action-btn:hover {
         color: var(--bs-primary);
     }
-    
+
     .post-action-count {
         font-size: 0.9rem;
         margin-left: 5px;
     }
-    
+
     .post-liked {
         color: var(--bs-primary);
     }
-    
+
     .create-post-card {
         margin-bottom: 20px;
         border-radius: 10px;
         padding: 15px;
     }
-    
+
     .create-post-header {
         display: flex;
         align-items: center;
         margin-bottom: 15px;
     }
-    
+
     .create-post-input {
         flex-grow: 1;
         margin-left: 10px;
@@ -231,14 +231,14 @@
         padding: 10px 15px;
         cursor: pointer;
     }
-    
+
     .create-post-actions {
         display: flex;
         justify-content: space-around;
         border-top: 1px solid var(--bs-border-color);
         padding-top: 15px;
     }
-    
+
     .create-post-action {
         display: flex;
         align-items: center;
@@ -246,63 +246,63 @@
         border-radius: 5px;
         cursor: pointer;
     }
-    
+
     .create-post-action:hover {
         background-color: var(--bs-dark-bg-subtle);
     }
-    
+
     .create-post-action i {
         margin-right: 8px;
         font-size: 1.2rem;
     }
-    
+
     .right-sidebar {
         position: sticky;
         top: 20px;
     }
-    
+
     .friend-suggestion {
         display: flex;
         align-items: center;
         padding: 10px 0;
     }
-    
+
     .friend-avatar {
         width: 40px;
         height: 40px;
         border-radius: 50%;
         margin-right: 10px;
     }
-    
+
     .friend-info {
         flex-grow: 1;
     }
-    
+
     .friend-username {
         font-weight: bold;
         margin-bottom: 0;
     }
-    
+
     .friend-meta {
         font-size: 0.8rem;
         color: var(--bs-secondary-color);
     }
-    
+
     .trending-tags {
         margin-top: 20px;
     }
-    
+
     .tag-item {
         display: flex;
         justify-content: space-between;
         padding: 8px 0;
     }
-    
+
     .tag-count {
         color: var(--bs-secondary-color);
         font-size: 0.9rem;
     }
-    
+
     @media (max-width: 991.98px) {
         .right-sidebar {
             display: none;
@@ -329,7 +329,7 @@
                             <small>Create Story</small>
                         </div>
                     </div>
-                    
+
                     <!-- Story Items -->
                     {% for story in stories %}
                     <div class="story-item" data-story-id="{{ story.id }}">
@@ -340,26 +340,18 @@
                         </div>
                     </div>
                     {% else %}
-                    <!-- Sample Stories When No Stories Available -->
+                    <!-- Empty state when no stories are available -->
                     <div class="story-item">
-                        <img src="{{ url_for('static', filename='images/story-sample-1.jpg') }}" alt="Sample story">
                         <img src="{{ url_for('static', filename='images/default-avatar.svg') }}" alt="User" class="story-avatar">
                         <div class="story-info">
-                            <small>Connect with friends to see their stories</small>
-                        </div>
-                    </div>
-                    <div class="story-item">
-                        <img src="{{ url_for('static', filename='images/story-sample-2.jpg') }}" alt="Sample story">
-                        <img src="{{ url_for('static', filename='images/default-avatar.svg') }}" alt="User" class="story-avatar">
-                        <div class="story-info">
-                            <small>Stories last 24 hours</small>
+                            <small>No stories yet</small>
                         </div>
                     </div>
                     {% endfor %}
                 </div>
             </div>
         </div>
-        
+
         <!-- Create Post -->
         <div class="card create-post-card mb-4">
             <div class="create-post-header">
@@ -374,7 +366,7 @@
                     <span>Photo</span>
                 </div>
                 <div class="create-post-action" data-bs-toggle="modal" data-bs-target="#createStoryModal">
-                    <i class="bi bi-camera-video text-primary"></i>
+                    <i class="bi bi-clock-history text-primary"></i>
                     <span>Story</span>
                 </div>
                 <div class="create-post-action" data-bs-toggle="modal" data-bs-target="#createPostModal">
@@ -383,7 +375,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Posts Feed -->
         <div id="posts-container">
             {% for post in posts %}
@@ -408,14 +400,14 @@
                         </ul>
                     </div>
                 </div>
-                
+
                 <div class="post-content">
                     {% if post.content %}
                     <div class="post-text">
                         {{ post.content }}
                     </div>
                     {% endif %}
-                    
+
                     {% if post.media %}
                     <div class="post-images">
                         <div class="post-image-grid grid-{{ post.media|length }}">
@@ -428,23 +420,23 @@
                     </div>
                     {% endif %}
                 </div>
-                
+
                 <div class="post-actions">
                     <button class="post-action-btn {% if post.user_liked %}post-liked{% endif %}" onclick="likePost({{ post.id }})">
                         <i class="bi {% if post.user_liked %}bi-heart-fill{% else %}bi-heart{% endif %}"></i>
                         <span class="post-action-count">{{ post.like_count }}</span>
                     </button>
-                    
+
                     <button class="post-action-btn" onclick="showComments({{ post.id }})">
                         <i class="bi bi-chat"></i>
                         <span class="post-action-count">{{ post.comment_count }}</span>
                     </button>
-                    
+
                     <button class="post-action-btn" onclick="sharePost({{ post.id }})">
                         <i class="bi bi-share"></i>
                     </button>
                 </div>
-                
+
                 <!-- Comments Section (Hidden by Default) -->
                 <div class="post-comments" id="comments-{{ post.id }}" style="display: none;">
                     <div class="p-3 border-top">
@@ -459,7 +451,7 @@
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div id="comments-container-{{ post.id }}">
                             {% for comment in post.comments %}
                             <div class="d-flex mb-2">
@@ -488,15 +480,15 @@
             <div class="card text-center p-5">
                 <div class="py-5">
                     <i class="bi bi-newspaper fs-1 text-muted mb-3"></i>
-                    <h5>Your feed is empty</h5>
-                    <p class="text-muted">Connect with friends or follow users to see their posts here</p>
+                    <h5>Welcome to SocialConnect!</h5>
+                    <p class="text-muted">Your feed is empty. Start by connecting with friends to see their posts here.</p>
                     <a href="{{ url_for('auth.friends') }}" class="btn btn-primary mt-3">Find Friends</a>
                 </div>
             </div>
             {% endfor %}
         </div>
     </div>
-    
+
     <!-- Right Sidebar -->
     <div class="col-lg-4">
         <div class="right-sidebar">
@@ -523,7 +515,7 @@
                     {% endfor %}
                 </div>
             </div>
-            
+
             <!-- Trending Tags -->
             <div class="card mb-4">
                 <div class="card-header">
@@ -542,7 +534,7 @@
                     {% endfor %}
                 </div>
             </div>
-            
+
             <!-- Footer Links -->
             <div class="mb-4">
                 <div class="d-flex flex-wrap gap-2 text-muted small">
@@ -576,11 +568,11 @@
                         <strong>{{ g.user.username }}</strong>
                     </div>
                 </div>
-                
+
                 <div class="mb-3">
                     <textarea class="form-control" id="postContent" rows="3" placeholder="What's on your mind?"></textarea>
                 </div>
-                
+
                 <div class="mb-3">
                     <div id="imagePreviewContainer" class="d-none mb-3">
                         <div class="position-relative">
@@ -588,15 +580,16 @@
                             <button type="button" class="btn-close position-absolute top-0 end-0" onclick="clearImagePreviews()"></button>
                         </div>
                     </div>
-                    
+
                     <div class="d-flex justify-content-between align-items-center p-2 rounded bg-dark-subtle">
                         <div>Add to your post</div>
                         <div>
-                            <button class="btn btn-sm me-2" onclick="document.getElementById('postImageUpload').click()">
+                            <button class="btn btn-sm me-2" onclick="document.getElementById('postImageUpload').click()" title="Upload to Imgur/Catbox">
                                 <i class="bi bi-image text-success fs-4"></i>
+                                <span class="small ms-1">Upload Photo</span>
                             </button>
                             <input type="file" id="postImageUpload" style="display: none" multiple accept="image/*" onchange="handleImageUpload(event)">
-                            
+
                             <button class="btn btn-sm">
                                 <i class="bi bi-emoji-smile text-warning fs-4"></i>
                             </button>
@@ -627,11 +620,11 @@
                         <strong>{{ g.user.username }}</strong>
                     </div>
                 </div>
-                
+
                 <div class="mb-3">
                     <textarea class="form-control" id="storyText" rows="3" placeholder="Add a caption to your story..."></textarea>
                 </div>
-                
+
                 <div class="mb-3">
                     <div id="storyPreviewContainer" class="d-none mb-3">
                         <div class="position-relative">
@@ -639,18 +632,13 @@
                             <button type="button" class="btn-close position-absolute top-0 end-0" onclick="clearStoryPreview()"></button>
                         </div>
                     </div>
-                    
+
                     <div class="d-flex justify-content-center gap-3 p-3 rounded bg-dark-subtle">
                         <button class="btn btn-outline-primary" onclick="document.getElementById('storyPhotoUpload').click()">
-                            <i class="bi bi-image me-2"></i> Photo
+                            <i class="bi bi-image me-2"></i> Photo (Imgur/Catbox)
                         </button>
                         <input type="file" id="storyPhotoUpload" style="display: none" accept="image/*" onchange="handleStoryPhotoUpload(event)">
-                        
-                        <button class="btn btn-outline-danger" onclick="document.getElementById('storyVideoUpload').click()">
-                            <i class="bi bi-camera-video me-2"></i> Video
-                        </button>
-                        <input type="file" id="storyVideoUpload" style="display: none" accept="video/*" onchange="handleStoryVideoUpload(event)">
-                        
+
                         <button class="btn btn-outline-success" id="textStoryBtn">
                             <i class="bi bi-fonts me-2"></i> Text
                         </button>
@@ -671,11 +659,11 @@
         <div class="modal-content">
             <div class="modal-body p-0 position-relative">
                 <button type="button" class="btn-close position-absolute top-0 end-0 m-3 bg-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                
+
                 <div id="storyContent" class="position-relative">
                     <!-- Story content will be loaded here -->
                 </div>
-                
+
                 <div class="story-controls position-absolute top-0 start-0 w-100 d-flex justify-content-between p-3">
                     <button class="btn btn-sm btn-light rounded-circle" id="prevStoryBtn">
                         <i class="bi bi-chevron-left"></i>
@@ -695,12 +683,12 @@
     // Current story being viewed
     let currentStoryIndex = 0;
     let stories = [];
-    
+
     // Files to upload with post
     let postFiles = [];
     let storyFile = null;
     let storyType = 'text';
-    
+
     // Initialize when DOM is loaded
     document.addEventListener('DOMContentLoaded', function() {
         // Set up story click events
@@ -712,13 +700,13 @@
                 });
             }
         });
-        
+
         // Set up text story button
         document.getElementById('textStoryBtn').addEventListener('click', function() {
             clearStoryPreview();
             storyType = 'text';
             storyFile = null;
-            
+
             // Show text input and customize it for text story
             const storyText = document.getElementById('storyText');
             storyText.placeholder = 'What\'s on your mind?';
@@ -726,7 +714,7 @@
             storyText.focus();
         });
     });
-    
+
     // Like a post
     function likePost(postId) {
         fetch(`/api/posts/${postId}/like`, {
@@ -742,7 +730,7 @@
                 const likeButton = postElement.querySelector('.post-action-btn');
                 const likeIcon = likeButton.querySelector('i');
                 const likeCount = likeButton.querySelector('.post-action-count');
-                
+
                 if (data.liked) {
                     likeButton.classList.add('post-liked');
                     likeIcon.classList.remove('bi-heart');
@@ -752,7 +740,7 @@
                     likeIcon.classList.remove('bi-heart-fill');
                     likeIcon.classList.add('bi-heart');
                 }
-                
+
                 likeCount.textContent = data.count;
             }
         })
@@ -760,28 +748,28 @@
             console.error('Error liking post:', error);
         });
     }
-    
+
     // Show comments for a post
     function showComments(postId) {
         const commentsSection = document.getElementById(`comments-${postId}`);
-        
+
         if (commentsSection.style.display === 'none') {
             commentsSection.style.display = 'block';
-            
+
             // Focus the comment input
             document.getElementById(`comment-input-${postId}`).focus();
         } else {
             commentsSection.style.display = 'none';
         }
     }
-    
+
     // Add a comment to a post
     function addComment(postId) {
         const commentInput = document.getElementById(`comment-input-${postId}`);
         const content = commentInput.value.trim();
-        
+
         if (!content) return;
-        
+
         fetch(`/api/posts/${postId}/comments`, {
             method: 'POST',
             headers: {
@@ -794,15 +782,15 @@
             if (data.success) {
                 // Clear input
                 commentInput.value = '';
-                
+
                 // Update UI with new comment
                 const commentsContainer = document.getElementById(`comments-container-${postId}`);
-                
+
                 // Clear "no comments" message if present
                 if (commentsContainer.querySelector('p.text-center')) {
                     commentsContainer.innerHTML = '';
                 }
-                
+
                 // Add new comment
                 const commentHtml = `
                     <div class="d-flex mb-2">
@@ -820,9 +808,9 @@
                         </div>
                     </div>
                 `;
-                
+
                 commentsContainer.insertAdjacentHTML('afterbegin', commentHtml);
-                
+
                 // Update comment count
                 const commentCountElement = document.querySelector(`.post-card[data-post-id="${postId}"] .post-action-btn:nth-child(2) .post-action-count`);
                 commentCountElement.textContent = parseInt(commentCountElement.textContent) + 1;
@@ -832,7 +820,7 @@
             console.error('Error adding comment:', error);
         });
     }
-    
+
     // Like a comment
     function likeComment(commentId) {
         fetch(`/api/comments/${commentId}/like`, {
@@ -853,19 +841,19 @@
             console.error('Error liking comment:', error);
         });
     }
-    
+
     // Share a post
     function sharePost(postId) {
         // A full implementation would show a sharing dialog
         alert('Sharing functionality coming soon!');
     }
-    
+
     // Edit a post
     function editPost(postId) {
         // A full implementation would populate and show the edit modal
         alert('Edit functionality coming soon!');
     }
-    
+
     // Delete a post
     function deletePost(postId) {
         if (confirm('Are you sure you want to delete this post? This cannot be undone.')) {
@@ -888,13 +876,13 @@
             });
         }
     }
-    
+
     // Report a post
     function reportPost(postId) {
         // A full implementation would show a reporting form
         alert('Report functionality coming soon!');
     }
-    
+
     // Add a friend
     function addFriend(userId) {
         fetch(`/api/friends/request`, {
@@ -919,30 +907,39 @@
             console.error('Error adding friend:', error);
         });
     }
-    
+
     // Handle image upload for posts
     function handleImageUpload(event) {
         const files = event.target.files;
         if (!files.length) return;
-        
+
         // Limit to 5 images
         if (files.length > 5) {
             alert('You can upload a maximum of 5 images per post');
             return;
         }
-        
+
+        // Check file sizes (limit to 5MB each)
+        const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+        for (const file of files) {
+            if (file.size > MAX_FILE_SIZE) {
+                alert(`File ${file.name} is too large. Maximum size is 5MB per image.`);
+                return;
+            }
+        }
+
         // Store files for later upload
         postFiles = Array.from(files);
-        
+
         // Show previews
         const previewContainer = document.getElementById('imagePreviewContainer');
         const preview = document.getElementById('imagePreview');
-        
+
         preview.innerHTML = '';
-        
+
         for (const file of files) {
             const reader = new FileReader();
-            
+
             reader.onload = function(e) {
                 const img = document.createElement('img');
                 img.src = e.target.result;
@@ -950,16 +947,17 @@
                 img.style.height = '100px';
                 img.style.objectFit = 'cover';
                 img.style.borderRadius = '8px';
-                
+                img.title = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+
                 preview.appendChild(img);
             };
-            
+
             reader.readAsDataURL(file);
         }
-        
+
         previewContainer.classList.remove('d-none');
     }
-    
+
     // Clear image previews
     function clearImagePreviews() {
         postFiles = [];
@@ -967,78 +965,52 @@
         document.getElementById('imagePreview').innerHTML = '';
         document.getElementById('postImageUpload').value = '';
     }
-    
+
     // Handle photo upload for stories
     function handleStoryPhotoUpload(event) {
         const file = event.target.files[0];
         if (!file) return;
-        
+
+        // Check file size (limit to 5MB)
+        const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+        if (file.size > MAX_FILE_SIZE) {
+            alert(`File ${file.name} is too large. Maximum size is 5MB.`);
+            return;
+        }
+
         storyType = 'image';
         storyFile = file;
-        
+
         // Show preview
         const previewContainer = document.getElementById('storyPreviewContainer');
         const preview = document.getElementById('storyPreview');
-        
+
         const reader = new FileReader();
-        
+
         reader.onload = function(e) {
             preview.innerHTML = '';
-            
+
             const img = document.createElement('img');
             img.src = e.target.result;
             img.style.maxWidth = '100%';
             img.style.maxHeight = '300px';
             img.style.borderRadius = '8px';
-            
+            img.title = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+
+            // Add file info
+            const fileInfo = document.createElement('div');
+            fileInfo.className = 'mt-2 small text-muted';
+            fileInfo.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB) - Will be uploaded to Imgur/Catbox`;
             preview.appendChild(img);
+            preview.appendChild(fileInfo);
             previewContainer.classList.remove('d-none');
         };
-        
+
         reader.readAsDataURL(file);
     }
-    
-    // Handle video upload for stories
-    function handleStoryVideoUpload(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-        
-        // Check if video is under 1 minute
-        const video = document.createElement('video');
-        video.preload = 'metadata';
-        
-        video.onloadedmetadata = function() {
-            window.URL.revokeObjectURL(video.src);
-            
-            if (video.duration > 60) {
-                alert('Videos for stories must be under 1 minute long');
-                return;
-            }
-            
-            storyType = 'video';
-            storyFile = file;
-            
-            // Show preview
-            const previewContainer = document.getElementById('storyPreviewContainer');
-            const preview = document.getElementById('storyPreview');
-            
-            preview.innerHTML = '';
-            
-            const videoElement = document.createElement('video');
-            videoElement.src = URL.createObjectURL(file);
-            videoElement.controls = true;
-            videoElement.autoplay = false;
-            videoElement.style.maxWidth = '100%';
-            videoElement.style.maxHeight = '300px';
-            videoElement.style.borderRadius = '8px';
-            
-            preview.appendChild(videoElement);
-            previewContainer.classList.remove('d-none');
-        };
-        
-        video.src = URL.createObjectURL(file);
-    }
-    
+
+    // We don't support video uploads anymore
+
     // Clear story preview
     function clearStoryPreview() {
         storyFile = null;
@@ -1046,36 +1018,43 @@
         document.getElementById('storyPreviewContainer').classList.add('d-none');
         document.getElementById('storyPreview').innerHTML = '';
         document.getElementById('storyPhotoUpload').value = '';
-        document.getElementById('storyVideoUpload').value = '';
-        
+
         // Reset text input
         const storyText = document.getElementById('storyText');
         storyText.placeholder = 'Add a caption to your story...';
         storyText.style.height = '';
     }
-    
+
     // Create a post
     function createPost() {
         const content = document.getElementById('postContent').value.trim();
-        
+
         if (!content && postFiles.length === 0) {
             alert('Please add some text or images to your post');
             return;
         }
-        
+
         // Disable submit button
         const submitButton = document.getElementById('submitPostButton');
         submitButton.disabled = true;
         submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Posting...';
-        
+
         // Create form data for files
         const formData = new FormData();
         formData.append('content', content);
-        
-        for (let i = 0; i < postFiles.length; i++) {
-            formData.append('media', postFiles[i]);
+
+        if (postFiles.length > 0) {
+            // Show upload message
+            const statusMsg = document.createElement('div');
+            statusMsg.className = 'alert alert-info mt-2';
+            statusMsg.innerHTML = `Uploading ${postFiles.length} image(s) to Imgur/Catbox... This may take a moment.`;
+            document.querySelector('#createPostModal .modal-body').appendChild(statusMsg);
+
+            for (let i = 0; i < postFiles.length; i++) {
+                formData.append('media', postFiles[i]);
+            }
         }
-        
+
         fetch('/api/posts', {
             method: 'POST',
             body: formData
@@ -1086,15 +1065,15 @@
                 // Close modal
                 const modal = bootstrap.Modal.getInstance(document.getElementById('createPostModal'));
                 modal.hide();
-                
+
                 // Clear form
                 document.getElementById('postContent').value = '';
                 clearImagePreviews();
-                
+
                 // Refresh posts (could also just add the new post to the UI)
                 location.reload();
             } else {
-                alert('Error creating post: ' + data.message);
+                alert('Error creating post: ' + (data.message || 'Unknown error'));
             }
         })
         .catch(error => {
@@ -1105,32 +1084,41 @@
             // Re-enable submit button
             submitButton.disabled = false;
             submitButton.innerHTML = 'Post';
+
+            // Remove status message if it exists
+            const statusMsg = document.querySelector('#createPostModal .modal-body .alert');
+            if (statusMsg) statusMsg.remove();
         });
     }
-    
+
     // Create a story
     function createStory() {
         const text = document.getElementById('storyText').value.trim();
-        
+
         if (storyType === 'text' && !text) {
             alert('Please add some text to your story');
             return;
         }
-        
+
         // Disable submit button
         const submitButton = document.getElementById('submitStoryButton');
         submitButton.disabled = true;
         submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Sharing...';
-        
+
         // Create form data
         const formData = new FormData();
         formData.append('content', text);
         formData.append('story_type', storyType);
-        
+
         if (storyFile) {
             formData.append('media', storyFile);
+            // Show upload message
+            const statusMsg = document.createElement('div');
+            statusMsg.className = 'alert alert-info mt-2';
+            statusMsg.innerHTML = 'Uploading image to Imgur/Catbox... This may take a moment.';
+            document.querySelector('.modal-body').appendChild(statusMsg);
         }
-        
+
         fetch('/api/stories', {
             method: 'POST',
             body: formData
@@ -1141,15 +1129,15 @@
                 // Close modal
                 const modal = bootstrap.Modal.getInstance(document.getElementById('createStoryModal'));
                 modal.hide();
-                
+
                 // Clear form
                 document.getElementById('storyText').value = '';
                 clearStoryPreview();
-                
+
                 // Refresh stories
                 location.reload();
             } else {
-                alert('Error creating story: ' + data.message);
+                alert('Error creating story: ' + (data.message || 'Unknown error'));
             }
         })
         .catch(error => {
@@ -1160,9 +1148,13 @@
             // Re-enable submit button
             submitButton.disabled = false;
             submitButton.innerHTML = 'Share to Story';
+
+            // Remove status message if it exists
+            const statusMsg = document.querySelector('.modal-body .alert');
+            if (statusMsg) statusMsg.remove();
         });
     }
-    
+
     // View a story
     function viewStory(storyId) {
         fetch(`/api/stories/${storyId}`)
@@ -1171,14 +1163,14 @@
             if (data.success) {
                 // Store all user stories for navigation
                 stories = data.user_stories;
-                
+
                 // Find index of current story
                 currentStoryIndex = stories.findIndex(s => s.id === parseInt(storyId));
-                
+
                 // Show modal
                 const modal = new bootstrap.Modal(document.getElementById('viewStoryModal'));
                 modal.show();
-                
+
                 // Display story
                 displayStory(stories[currentStoryIndex]);
             }
@@ -1187,14 +1179,14 @@
             console.error('Error fetching story:', error);
         });
     }
-    
+
     // Display a story in the view modal
     function displayStory(story) {
         const storyContent = document.getElementById('storyContent');
-        
+
         // Clear previous content
         storyContent.innerHTML = '';
-        
+
         // Set up header with user info and timestamp
         const header = document.createElement('div');
         header.className = 'story-header position-absolute top-0 start-0 w-100 d-flex align-items-center p-3';
@@ -1205,10 +1197,10 @@
                 <div><small>${formatTimeAgo(story.created_at)}</small></div>
             </div>
         `;
-        
+
         // Create content based on story type
         let content;
-        
+
         if (story.story_type === 'image') {
             content = document.createElement('img');
             content.src = story.media_url;
@@ -1216,14 +1208,6 @@
             content.style.height = 'auto';
             content.style.maxHeight = '80vh';
             content.style.objectFit = 'contain';
-        } else if (story.story_type === 'video') {
-            content = document.createElement('video');
-            content.src = story.media_url;
-            content.controls = true;
-            content.autoplay = true;
-            content.style.width = '100%';
-            content.style.height = 'auto';
-            content.style.maxHeight = '80vh';
         } else {
             // Text story
             content = document.createElement('div');
@@ -1236,7 +1220,7 @@
             content.style.textAlign = 'center';
             content.innerHTML = `<p>${story.content}</p>`;
         }
-        
+
         // Add caption if available
         if (story.content && story.story_type !== 'text') {
             const caption = document.createElement('div');
@@ -1244,19 +1228,19 @@
             caption.innerHTML = `<p class="mb-0">${story.content}</p>`;
             storyContent.appendChild(caption);
         }
-        
+
         // Add to story content
         storyContent.appendChild(content);
         storyContent.appendChild(header);
-        
+
         // Set up navigation buttons
         document.getElementById('prevStoryBtn').style.visibility = currentStoryIndex > 0 ? 'visible' : 'hidden';
         document.getElementById('nextStoryBtn').style.visibility = currentStoryIndex < stories.length - 1 ? 'visible' : 'hidden';
-        
+
         // Set up event listeners for navigation
         document.getElementById('prevStoryBtn').onclick = navigateToPrevStory;
         document.getElementById('nextStoryBtn').onclick = navigateToNextStory;
-        
+
         // Auto advance to next story for images and text
         if (story.story_type !== 'video') {
             setTimeout(() => {
@@ -1269,13 +1253,13 @@
                 }
             }, 5000);
         }
-        
+
         // Mark story as viewed
         fetch(`/api/stories/${story.id}/view`, {
             method: 'POST'
         }).catch(error => console.error('Error marking story as viewed:', error));
     }
-    
+
     // Navigate to previous story
     function navigateToPrevStory() {
         if (currentStoryIndex > 0) {
@@ -1283,7 +1267,7 @@
             displayStory(stories[currentStoryIndex]);
         }
     }
-    
+
     // Navigate to next story
     function navigateToNextStory() {
         if (currentStoryIndex < stories.length - 1) {
@@ -1295,7 +1279,7 @@
             modal.hide();
         }
     }
-    
+
     // Format time ago (e.g. "2 hours ago")
     function formatTimeAgo(timestamp) {
         const date = new Date(timestamp);
@@ -1304,7 +1288,7 @@
         const diffSec = Math.round(diffMs / 1000);
         const diffMin = Math.round(diffSec / 60);
         const diffHour = Math.round(diffMin / 60);
-        
+
         if (diffSec < 60) {
             return `${diffSec} second${diffSec !== 1 ? 's' : ''} ago`;
         } else if (diffMin < 60) {
