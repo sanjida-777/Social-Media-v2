@@ -76,6 +76,10 @@ def create_app():
     # Initialize the app with the SQLAlchemy extension
     db.init_app(app)
 
+    # Initialize WebSocket server
+    from utils.websocket import init_socketio
+    socketio = init_socketio(app)
+
     # Register custom Jinja2 filters
     from utils.filters import register_filters
     register_filters(app)

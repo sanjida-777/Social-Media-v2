@@ -154,6 +154,13 @@ def create_post():
         # Commit changes
         db.session.commit()
 
+        # Send real-time notification to friends
+        try:
+            from utils.websocket import notify_new_post
+            notify_new_post(post.id, g.user.id, g.user.username)
+        except Exception as e:
+            logger.warning(f"Failed to send real-time notification: {str(e)}")
+
         return jsonify({
             'success': True,
             'message': 'Post created successfully',
@@ -368,6 +375,13 @@ def add_comment(post_id):
         db.session.add(comment)
         db.session.commit()
 
+        # Send real-time notification
+        try:
+            from utils.websocket import notify_new_comment
+            notify_new_comment(comment.id, post_id, g.user.id, g.user.username, post.user_id)
+        except Exception as e:
+            logger.warning(f"Failed to send real-time notification: {str(e)}")
+
         # Get comment author
         author = User.query.get(comment.user_id)
 
@@ -477,9 +491,17 @@ def like_post(post_id):
         # Get updated like count
         like_count = Like.query.filter_by(post_id=post_id).count()
 
+        # Send real-time notification
+        try:
+            from utils.websocket import notify_new_like
+            notify_new_like(post_id, g.user.id, post.user_id, like_count)
+        except Exception as e:
+            logger.warning(f"Failed to send real-time notification: {str(e)}")
+
         return jsonify({
             'success': True,
             'message': 'Post liked successfully',
+            'action': 'liked',
             'like_count': like_count
         })
 
@@ -530,9 +552,17 @@ def unlike_post(post_id):
         # Get updated like count
         like_count = Like.query.filter_by(post_id=post_id).count()
 
+        # Send real-time notification
+        try:
+            from utils.websocket import notify_new_like
+            notify_new_like(post_id, g.user.id, post.user_id, like_count)
+        except Exception as e:
+            logger.warning(f"Failed to send real-time notification: {str(e)}")
+
         return jsonify({
             'success': True,
             'message': 'Post unliked successfully',
+            'action': 'unliked',
             'like_count': like_count
         })
 
